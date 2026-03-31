@@ -672,7 +672,7 @@ body.viewer-mode .admin-only{display:none!important}
   </div>
 </div></div>
 
-<div class="mo" id="mo-loot"><div class="md" style="width:700px;max-height:92vh;overflow-y:auto">
+<div class="mo" id="mo-loot"><div class="md" style="width:800px;max-height:92vh;overflow-y:auto">
   <div class="md-title">🎁 分配装备</div>
 
   <!-- 模式切换 -->
@@ -735,7 +735,7 @@ body.viewer-mode .admin-only{display:none!important}
   <!-- ══ MODE B: 装备类型 ══ -->
   <div id="loot-mode-type" style="display:none">
     <input class="fi" id="l-type-search" placeholder="搜索装备类型…" oninput="renderLootTypeGrid(this.value)" style="margin-bottom:10px">
-    <div id="l-type-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;max-height:220px;overflow-y:auto;margin-bottom:14px"></div>
+    <div id="l-type-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;max-height:300px;overflow-y:auto;margin-bottom:14px"></div>
     <!-- After type selected: quality + member -->
     <div id="loot-type-step2" style="display:none">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:12px 14px;background:var(--bg-card2);border:1px solid var(--border-hi);border-radius:10px">
@@ -1235,16 +1235,21 @@ function setLootMode(mode) {
     document.getElementById('l-confirm-btn').style.display='none';
     resetLootTypeMode();
     sv('l-type-search','');
-    renderLootTypeGrid('');
+    // Small delay to ensure DOM is visible before rendering
+    setTimeout(()=>renderLootTypeGrid(''), 30);
   }
 }
 
 function resetLootTypeMode() {
-  lootTypeSel=null; lootSelGearType=null;
-  document.getElementById('loot-type-step2').style.display='none';
-  document.getElementById('l-type-grid').style.display='';
-  document.getElementById('l-type-search').style.display='';
-  document.getElementById('l-confirm-btn').style.display='none';
+  lootTypeSel=null; lootSelGearType=null; lootSelType=null;
+  const step2 = document.getElementById('loot-type-step2');
+  const grid  = document.getElementById('l-type-grid');
+  const search= document.getElementById('l-type-search');
+  const btn   = document.getElementById('l-confirm-btn');
+  if(step2)  step2.style.display='none';
+  if(grid)   grid.style.display='';
+  if(search) search.style.display='';
+  if(btn)    btn.style.display='none';
 }
 
 // Type mode member selection
@@ -1398,29 +1403,38 @@ function selectLootItem(itemId) {
 // Legacy: keep lootBackToStep1 for compatibility
 function lootBackToStep1() { lootGoStep(1); }
 
-// renderLootTypeGrid kept for gear management page
 function renderLootTypeGrid(q) {
-  const filtered = q ? gearTypes.filter(g=>g.name.toLowerCase().includes(q.toLowerCase())) : gearTypes;
+  const el = document.getElementById('l-type-grid');
+  if(!el) return;
+  const filtered = q
+    ? gearTypes.filter(g => g.name.toLowerCase().includes(q.toLowerCase()))
+    : gearTypes;
+  if(!filtered.length) {
+    el.innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center;grid-column:1/-1">暂无装备类型</div>';
+    return;
+  }
   const qColor = {normal:'#f4e000', hero:'#e84040', epic:'#a335ee'};
-  document.getElementById('l-type-grid')?.innerHTML && (document.getElementById('l-type-grid').innerHTML = filtered.map(g => {
+  el.innerHTML = filtered.map(g => {
     const wowIco = slotIconUrl(g.name);
     let iconHtml;
-    if(g.icon){iconHtml=`<img src="${g.icon}" style="width:32px;height:32px;object-fit:cover;border-radius:6px">`;}
-    else if(wowIco){iconHtml=`<img src="${wowIco}" style="width:32px;height:32px;object-fit:cover;border-radius:6px" onerror="this.style.display='none'">`;}
-    else{iconHtml=`<span style="font-size:22px">${g.emoji||'🗡️'}</span>`;}
+    if(g.icon)      { iconHtml = `<img src="${g.icon}" style="width:36px;height:36px;object-fit:cover;border-radius:7px">`; }
+    else if(wowIco) { iconHtml = `<img src="${wowIco}" style="width:36px;height:36px;object-fit:cover;border-radius:7px" onerror="this.style.display='none'">`; }
+    else            { iconHtml = `<span style="font-size:24px">${g.emoji||'🗡️'}</span>`; }
     return `<div onclick="selectLootType(${g.id})"
-      style="background:var(--bg-card2);border:1px solid var(--border);border-radius:9px;padding:12px 10px;cursor:pointer;text-align:center;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:6px"
-      onmouseover="this.style.borderColor='var(--gold)';this.style.background='rgba(200,168,75,.08)'"
+      style="background:var(--bg-card2);border:1px solid var(--border);border-radius:10px;padding:14px 10px;cursor:pointer;text-align:center;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:7px"
+      onmouseover="this.style.borderColor='var(--gold)';this.style.background='rgba(201,168,76,.1)'"
       onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg-card2)'">
       ${iconHtml}
-      <div style="font-size:12px;font-weight:600;color:var(--text)">${g.name}</div>
-      <div style="font-size:10px;display:flex;gap:4px">
-        <span style="color:${qColor.normal}">${g.n}</span><span style="color:var(--muted)">/</span>
-        <span style="color:${qColor.hero}">${g.h}</span><span style="color:var(--muted)">/</span>
-        <span style="color:${qColor.epic}">${g.e}</span>
+      <div style="font-size:12px;font-weight:700;color:var(--text)">${g.name}</div>
+      <div style="font-size:10px;display:flex;gap:5px;align-items:center">
+        <span style="color:${qColor.normal};font-weight:600">${g.n}</span>
+        <span style="color:var(--muted);font-size:8px">|</span>
+        <span style="color:${qColor.hero};font-weight:600">${g.h}</span>
+        <span style="color:var(--muted);font-size:8px">|</span>
+        <span style="color:${qColor.epic};font-weight:600">${g.e}</span>
       </div>
     </div>`;
-  }).join(''));
+  }).join('');
 }
 
 function selectLootType(gearTypeId) {
