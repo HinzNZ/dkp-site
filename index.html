@@ -219,6 +219,7 @@ tr:hover td{background:rgba(201,168,76,.025)}
 body.viewer-mode .admin-only{display:none!important}
 /* change pw modal */
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -1048,5 +1049,55 @@ initCal();
     <button class="btn btn-gold" onclick="confirmChPw()">保存修改</button>
   </div>
 </div></div>
+
+<script>
+const supabaseClient = window.supabase.createClient(
+  "https://cyorxzjsfpfspvtesbqi.supabase.co",
+  "sb_publishable_7TPYG1I3uB2psq_znpE-_Q_dN397iaA"
+);
+
+// override local data
+let members = [];
+let events = [];
+
+async function loadMembersFromDB() {
+  const { data, error } = await supabaseClient.from('members').select('*');
+  if (error) {
+    console.error(error);
+    alert("Failed to load members");
+    return;
+  }
+  members = data;
+  if (typeof renderMembers === "function") renderMembers();
+}
+
+async function updateMemberDKP(id, newDKP) {
+  const { error } = await supabaseClient
+    .from('members')
+    .update({ dkp: newDKP })
+    .eq('id', id);
+
+  if (error) console.error(error);
+}
+
+// hook into existing confirmDkp if exists
+if (typeof confirmDkp === "function") {
+  const oldConfirm = confirmDkp;
+  confirmDkp = async function(...args) {
+    await oldConfirm.apply(this, args);
+
+    // sync all members after update
+    for (let m of members) {
+      await updateMemberDKP(m.id, m.dkp);
+    }
+  }
+}
+
+// auto load
+window.addEventListener("load", () => {
+  loadMembersFromDB();
+});
+</script>
+
 </body>
 </html>
