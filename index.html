@@ -4,18 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AUCKLAND TRANSPORT · 公会DKP管理</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
+  /* WoW dark theme */
   --gold:#c9a84c;--gold-light:#f0d080;--gold-dark:#8a6a1e;
-  --bg:#0a0c10;--bg-card:#111420;--bg-card2:#161b2a;
-  --border:rgba(201,168,76,0.2);--border-hi:rgba(201,168,76,0.55);
-  --text:#e8dfc8;--muted:#8a8070;
+  --bg:#07090e;--bg-card:#0f1420;--bg-card2:#141926;
+  --bg-card3:#1a2030;
+  --border:rgba(201,168,76,0.18);--border-hi:rgba(201,168,76,0.5);
+  --text:#e4d9bc;--muted:#8a7e68;--text-dim:#b8aa8e;
   --red:#d05050;--green:#4aaa80;--blue:#4a9fe0;--purple:#a06ee0;
-  --shadow:0 8px 40px rgba(0,0,0,.7);
+  --shadow:0 8px 40px rgba(0,0,0,.8);
+  /* WoW parchment/light theme */
+  --lbg:#f2ebe0;--lbg-card:#fdf6eb;--lbg-card2:#f5ecdc;
+  --lborder:rgba(100,72,22,.2);--lborder-hi:rgba(100,72,22,.5);
+  --ltext:#1e140a;--lmuted:#6e5a3a;--ltext-dim:#4a3820;
+  --lgold:#8a5c10;--lgold-dark:#5a3a08;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Noto Sans SC',sans-serif;min-height:100vh;overflow-x:hidden}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans SC',sans-serif;min-height:100vh;overflow-x:hidden;font-size:14px;line-height:1.6}
 body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 15% 10%,rgba(201,168,76,.05) 0%,transparent 70%),radial-gradient(ellipse 50% 50% at 85% 85%,rgba(60,80,200,.05) 0%,transparent 70%);pointer-events:none;z-index:0}
 
 .hdr{position:sticky;top:0;z-index:200;background:rgba(10,12,16,.96);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:0 28px}
@@ -47,7 +54,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .b-red{color:var(--red);border-color:rgba(208,80,80,.4)}
 .b-muted{color:var(--muted);border-color:rgba(138,128,112,.3)}
 
-.stitle{font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.stitle{font-family:'Cinzel','Noto Serif SC',serif;font-size:11px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:10px}
 .stitle::after{content:'';flex:1;height:1px;background:var(--border)}
 
 .fg{display:flex;flex-direction:column;gap:5px}
@@ -112,7 +119,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .ed-back{background:none;border:none;color:var(--muted);font-family:'Noto Sans SC',sans-serif;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;padding:6px 0;margin-bottom:16px;transition:.15s}
 .ed-back:hover{color:var(--gold)}
 .ed-hero{background:var(--bg-card);border:1px solid var(--border-hi);border-radius:14px;padding:24px 28px;margin-bottom:16px}
-.ed-title{font-family:'Cinzel',serif;font-size:22px;font-weight:700;color:var(--gold);margin-bottom:8px}
+.ed-title{font-family:'Cinzel','Noto Serif SC',serif;font-size:22px;font-weight:700;color:var(--gold);margin-bottom:8px}
 .ed-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .ed-acts{display:flex;gap:8px;flex-wrap:wrap}
 .ed-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
@@ -146,7 +153,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 /* ── MEMBERS / DKP ── */
 .tb-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
 table{width:100%;border-collapse:collapse}
-th{background:rgba(201,168,76,.06);padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--gold);letter-spacing:2px;border-bottom:1px solid var(--border)}
+th{background:rgba(201,168,76,.06);padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--gold);letter-spacing:2px;border-bottom:1px solid var(--border);font-family:'Cinzel','Noto Serif SC',serif}
 td{padding:10px 16px;font-size:13px;border-bottom:1px solid rgba(201,168,76,.07)}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:rgba(201,168,76,.025)}
@@ -206,14 +213,156 @@ tr:hover td{background:rgba(201,168,76,.025)}
 .gtc-del:hover{color:var(--red)}
 
 /* Light mode */
-body.light-mode{--bg:#e8e0d0;--bg-card:#f4ede0;--bg-card2:#ede5d5;--border:rgba(120,90,20,.2);--border-hi:rgba(120,90,20,.45);--text:#2a1e0a;--muted:#7a6850;--shadow:0 4px 24px rgba(0,0,0,.15)}
-body.light-mode .hdr{background:rgba(235,225,200,.97);box-shadow:0 1px 0 rgba(150,110,20,.2),0 2px 12px rgba(0,0,0,.1)}
-body.light-mode .fi,body.light-mode .fs{background:rgba(255,255,255,.7);border-color:rgba(120,90,20,.2);color:var(--text)}
-body.light-mode th{background:rgba(150,110,20,.08)}
-body.light-mode td{border-bottom-color:rgba(150,110,20,.1)}
-body.light-mode tr:hover td{background:rgba(150,110,20,.04)}
-body.light-mode .md{background:var(--bg-card)}
-body.light-mode .rcard,body.light-mode .pcard,body.light-mode .gc,.light-mode .tb-wrap{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+/* ══ LIGHT MODE — WoW Parchment Theme ══ */
+body.light-mode {
+  --bg:var(--lbg);
+  --bg-card:var(--lbg-card);
+  --bg-card2:var(--lbg-card2);
+  --bg-card3:#ede4d0;
+  --border:var(--lborder);
+  --border-hi:var(--lborder-hi);
+  --text:var(--ltext);
+  --muted:var(--lmuted);
+  --text-dim:var(--ltext-dim);
+  --gold:var(--lgold);
+  --gold-dark:var(--lgold-dark);
+  --gold-light:#b07820;
+  --shadow:0 4px 20px rgba(80,50,10,.15);
+  --red:#b03020;
+  --green:#2a7a48;
+  --blue:#1a60a0;
+  background:var(--lbg);
+  color:var(--ltext);
+}
+/* Parchment texture overlay */
+body.light-mode::before {
+  background:
+    radial-gradient(ellipse 70% 50% at 10% 5%,rgba(180,140,60,.06) 0%,transparent 60%),
+    url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+}
+body.light-mode .hdr {
+  background:linear-gradient(180deg,rgba(240,228,200,.98) 0%,rgba(232,218,188,.96) 100%);
+  border-bottom-color:rgba(100,72,22,.25);
+  box-shadow:0 1px 0 rgba(180,140,60,.3),0 2px 16px rgba(80,50,10,.12);
+}
+body.light-mode .nb { color:var(--lmuted); }
+body.light-mode .nb:hover,body.light-mode .nb.on {
+  color:var(--lgold);
+  background:rgba(100,72,22,.08);
+  border-color:rgba(100,72,22,.25);
+}
+body.light-mode .logo .en { color:var(--lgold); }
+body.light-mode .logo .cn { color:var(--lmuted); }
+body.light-mode .stitle { color:var(--lgold); }
+body.light-mode .stitle::after { background:rgba(100,72,22,.2); }
+/* Cards */
+body.light-mode .gc,
+body.light-mode .tb-wrap,
+body.light-mode .rcard,
+body.light-mode .pcard,
+body.light-mode .md,
+body.light-mode .events-panel,
+body.light-mode .cal-page {
+  background:var(--lbg-card);
+  border-color:rgba(100,72,22,.2);
+  box-shadow:0 2px 12px rgba(80,50,10,.1),inset 0 1px 0 rgba(255,255,255,.6);
+}
+body.light-mode .rcard:hover,
+body.light-mode .pcard:hover { border-color:rgba(100,72,22,.45); }
+/* Tables */
+body.light-mode th {
+  background:rgba(100,72,22,.08);
+  color:var(--lgold);
+  border-bottom-color:rgba(100,72,22,.2);
+}
+body.light-mode td { color:var(--ltext); border-bottom-color:rgba(100,72,22,.1); }
+body.light-mode tr:hover td { background:rgba(100,72,22,.04); }
+/* Forms */
+body.light-mode .fi,
+body.light-mode .fs {
+  background:rgba(255,255,255,.8);
+  border-color:rgba(100,72,22,.25);
+  color:var(--ltext);
+}
+body.light-mode .fi:focus,body.light-mode .fs:focus { border-color:var(--lgold); }
+body.light-mode .fs option { background:var(--lbg-card); color:var(--ltext); }
+/* Buttons */
+body.light-mode .btn-outline {
+  border-color:rgba(100,72,22,.3);
+  color:var(--lmuted);
+}
+body.light-mode .btn-outline:hover {
+  border-color:var(--lgold);
+  color:var(--lgold);
+}
+body.light-mode .btn-gold {
+  background:linear-gradient(135deg,var(--lgold-dark),var(--lgold));
+  color:#fdf6eb;
+}
+body.light-mode .btn-green { background:rgba(42,122,72,.12); color:#2a7a48; border-color:rgba(42,122,72,.4); }
+body.light-mode .btn-red   { background:rgba(176,48,32,.12); color:#b03020; border-color:rgba(176,48,32,.4); }
+body.light-mode .btn-blue  { background:rgba(26,96,160,.12); color:#1a60a0; border-color:rgba(26,96,160,.4); }
+/* Badges */
+body.light-mode .b-gold   { color:var(--lgold); border-color:rgba(100,72,22,.4); }
+body.light-mode .b-green  { color:#2a7a48; border-color:rgba(42,122,72,.4); }
+body.light-mode .b-blue   { color:#1a60a0; border-color:rgba(26,96,160,.4); }
+body.light-mode .b-red    { color:#b03020; border-color:rgba(176,48,32,.4); }
+body.light-mode .b-muted  { color:var(--lmuted); border-color:rgba(100,72,22,.25); }
+/* Tabs */
+body.light-mode .tab { color:var(--lmuted); }
+body.light-mode .tab:hover { color:var(--ltext); }
+body.light-mode .tab.on { color:var(--lgold); border-bottom-color:var(--lgold); }
+body.light-mode .tabs { border-bottom-color:rgba(100,72,22,.2); }
+/* Phase buttons (pb) */
+body.light-mode .pb { background:rgba(255,255,255,.7); border-color:rgba(100,72,22,.2); color:var(--lmuted); }
+body.light-mode .pb:hover,body.light-mode .pb.on { border-color:var(--lgold); color:var(--lgold); background:rgba(100,72,22,.08); }
+/* Log rows */
+body.light-mode .lrow { background:rgba(255,255,255,.5); border-color:rgba(100,72,22,.15); }
+/* Calendar */
+body.light-mode .mg-cell { border-color:rgba(100,72,22,.12); }
+body.light-mode .mg-dow  { color:var(--lmuted); border-color:rgba(100,72,22,.12); }
+body.light-mode .mg-dn   { color:var(--lmuted); }
+body.light-mode .mg-dn.tod { background:var(--lgold); color:#fdf6eb; }
+body.light-mode .wg-t,body.light-mode .wg-dh { border-color:rgba(100,72,22,.12); }
+body.light-mode .mday.tod { background:var(--lgold); color:#fdf6eb; }
+body.light-mode .mini-month { color:var(--lgold); }
+/* Event pills */
+body.light-mode .ep-completed { background:rgba(100,72,22,.1); border-color:rgba(100,72,22,.5); color:var(--lgold); }
+body.light-mode .ep-planned   { background:rgba(26,96,160,.1); border-color:rgba(26,96,160,.5); color:#1a60a0; }
+body.light-mode .ep-active    { background:rgba(42,122,72,.1); border-color:rgba(42,122,72,.5); color:#2a7a48; }
+/* Ed hero */
+body.light-mode .ed-hero { background:var(--lbg-card); border-color:rgba(100,72,22,.35); }
+body.light-mode .eds { background:rgba(100,72,22,.06); border-color:rgba(100,72,22,.15); }
+/* DKP values */
+body.light-mode .dv  { color:var(--lgold); }
+body.light-mode .dv- { color:#b03020; }
+/* Role tags */
+body.light-mode .rt-t2 { background:rgba(40,60,200,.1); color:#2040c0; border-color:rgba(40,60,200,.3); }
+body.light-mode .rt-n2 { background:rgba(42,122,72,.1); color:#2a7a48; border-color:rgba(42,122,72,.3); }
+body.light-mode .rt-d2 { background:rgba(176,48,32,.1); color:#b03020; border-color:rgba(176,48,32,.3); }
+/* Stat cards */
+body.light-mode .sc { background:var(--lbg-card); border-color:rgba(100,72,22,.2); }
+body.light-mode .sc-l { color:var(--lmuted); }
+body.light-mode .sc-v { color:var(--lgold); }
+/* Gear type cards */
+body.light-mode .gear-type-card { background:var(--lbg-card); border-color:rgba(100,72,22,.2); }
+body.light-mode .gtc-name-input { color:var(--ltext); border-bottom-color:rgba(100,72,22,.2); background:transparent; }
+body.light-mode .gtc-price-input { background:rgba(255,255,255,.6); border-color:rgba(100,72,22,.2); }
+/* Login box */
+body.light-mode .login-box { background:rgba(253,246,235,.92); border-color:rgba(100,72,22,.4); }
+body.light-mode .login-logo { color:var(--lgold); }
+body.light-mode .ltab.on { background:rgba(100,72,22,.12); color:var(--lgold); }
+/* Modal */
+body.light-mode .mo { background:rgba(80,50,10,.6); }
+body.light-mode .md { background:var(--lbg-card); border-color:rgba(100,72,22,.4); }
+body.light-mode .md-title { color:var(--lgold); }
+/* Scrollbar */
+body.light-mode ::-webkit-scrollbar-thumb { background:rgba(100,72,22,.3); }
+/* Cal sidebar */
+body.light-mode .cal-sidebar { background:rgba(232,218,188,.5); border-color:rgba(100,72,22,.15); }
+body.light-mode .cal-top { border-color:rgba(100,72,22,.15); }
+/* Quick links */
+body.light-mode .gc[onclick] { background:var(--lbg-card); }
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(201,168,76,.22);border-radius:3px}
