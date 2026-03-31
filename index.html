@@ -776,7 +776,7 @@ function saveEvt(){
     roster:members.filter(m=>m.st==='在').map(m=>m.id),dkpLog:[],lootLog:[]};
   events.push(ev);
   // Save to DB
-  db.upsertEvent(ev).then(res => { if(res) ev.db_id = res.id; });
+  db.insertEvent(ev); // sets ev.db_id on success
   closeMo('mo-evt');renderAll();openEvtDetail(ev.id);toast('活动已创建','ok');
 }
 
@@ -798,8 +798,10 @@ function confirmDkp(){
   const amt=parseInt(gv('dkp-amt'))||0,note=gv('dkp-note');
   const e=events.find(x=>x.id===dkpEvtId);if(!e)return;
   const tgts=dkpSc==='all'?e.roster:dkpSel;
-  tgts.forEach(id=>{const m=members.find(x=>x.id===id);if(m)m.dkp+=amt;});
-  e.dkpLog.push({type:note||'加分',amount:amt,scope:dkpSc,members:dkpSc==='sel'?[...dkpSel]:[],note,time:nowT()});
+  tgts.forEach(id=>{const m=members.find(x=>x.id===id);if(m){m.dkp+=amt;if(m.db_id)db.updateMemberDkp(m.db_id,m.dkp);}});
+  const dlog={type:note||'加分',amount:amt,scope:dkpSc,members:dkpSc==='sel'?[...dkpSel]:[],note,time:nowT()};
+  e.dkpLog.push(dlog);
+  if(e.db_id) db.insertDkpLog(e.db_id, dlog);
   closeMo('mo-dkp');renderED(dkpEvtId);toast(`已为 ${tgts.length} 人加 ${amt} DKP ✨`,'ok');
 }
 
@@ -820,11 +822,11 @@ function confirmLoot(){
   if(!item){toast('请填写装备名称','err');return;}
   const e=events.find(x=>x.id===lootEvtId);
   m.dkp-=dkp;
-  const llog={mid:lootSel,item,q,dkp,time:nowT()};
+  const llog={mid:lootSel,member_db_id:m.db_id||m.id,item,q,dkp,time:nowT()};
   e?.lootLog.push(llog);
   if(e?.db_id){
     db.insertLootLog(e.db_id, llog);
-    db.updateMemberDkp(m.id, m.dkp);
+    if(m.db_id) db.updateMemberDkp(m.db_id, m.dkp);
   }
   closeMo('mo-loot');renderED(lootEvtId);renderGloot();
   toast(`${m.char||m.wx} 获得 ${item}，扣 ${dkp} DKP`,'ok');
@@ -843,11 +845,12 @@ function saveMem(){
   const d={wx:gv('mm-wx').trim(),bn:gv('mm-bn').trim(),char:gv('mm-char').trim(),cls:gv('mm-cls'),role:gv('mm-role'),st:gv('mm-st'),dkp:parseInt(gv('mm-dkp'))||0,note:gv('mm-note').trim()};
   if(!d.wx){toast('请填写微信名','err');return;}
   if(editMemId){
-    Object.assign(members.find(x=>x.id===editMemId),d);
-    db.upsertMember(members.find(x=>x.id===editMemId));
+    const existing=members.find(x=>x.id===editMemId);
+    Object.assign(existing,d);
+    db.upsertMember(existing);
   } else {
     d.id=uid++;members.push(d);
-    db.upsertMember(d).then(res=>{ if(res) d.id=res.id; });
+    db.upsertMember(d); // sets d.db_id
   }
   closeMo('mo-mem');renderMembers();renderDkp();toast(editMemId?'已更新':'团员已添加','ok');
 }
@@ -937,7 +940,7 @@ function updG(id,k,v){
   else g[k]=parseInt(v)||0;
   // Debounce DB write
   clearTimeout(_updGTimers[id]);
-  _updGTimers[id]=setTimeout(()=>{ if(g.db_id) db.upsertGearType(g); },800);
+  _updGTimers[id]=setTimeout(()=>{ if(g.db_id) db.updateGearType(g); },800);
 }
 function rmG(id){
   if(!confirm('确定删除这个装备类型？'))return;
@@ -985,7 +988,7 @@ function saveGearType(){
     emoji:'🗡️'
   };
   gearTypes.push(newG);
-  db.upsertGearType(newG).then(res=>{ if(res) newG.db_id=res.id; });
+  db.insertGearType(newG); // sets newG.db_id
   closeMo('mo-gear-type');renderGear();toast(`已添加「${name}」`,'ok');
 }
 function addGear(){openGearTypeMo();}
@@ -1192,24 +1195,30 @@ function requireAdmin(fn) {
 const SB_URL = 'https://nazdjrenlgoyolygxbij.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hemRqcmVubGdveW9seWd4YmlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NDQzMDksImV4cCI6MjA5MDUyMDMwOX0.iMScj50UhBZlvf3nROJ9ocR4_n7VmkbtoWXXyAtVuns';
 
-async function sbFetch(path, opts={}) {
-  const res = await fetch(SB_URL + '/rest/v1/' + path, {
-    headers: {
-      'apikey': SB_KEY,
-      'Authorization': 'Bearer ' + SB_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': opts.prefer || 'return=representation',
-      ...opts.headers
-    },
-    ...opts
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    console.error('SB error:', path, err);
+async function sbFetch(path, method='GET', body=null, prefer='return=representation') {
+  const headers = {
+    'apikey': SB_KEY,
+    'Authorization': 'Bearer ' + SB_KEY,
+    'Content-Type': 'application/json',
+    'Prefer': prefer,
+  };
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const res = await fetch(SB_URL + '/rest/v1/' + path, opts);
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('SB error', method, path, err);
+      toast('数据库操作失败: ' + err.slice(0,80), 'err');
+      return null;
+    }
+    const text = await res.text();
+    return text ? JSON.parse(text) : [];
+  } catch(e) {
+    console.error('SB fetch exception:', e);
+    toast('网络错误，请检查连接', 'err');
     return null;
   }
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
 }
 
 const db = {
@@ -1218,33 +1227,38 @@ const db = {
     return await sbFetch('members?select=*&order=id') || [];
   },
   async upsertMember(m) {
-    const row = { wx: m.wx, bn: m.bn, char_name: m.char, cls: m.cls, role: m.role, status: m.st, dkp: m.dkp, note: m.note };
-    if (m.id && m.id < 10000) row.id = m.id; // preserve seed IDs
-    const res = await sbFetch('members', { method: 'POST', body: JSON.stringify(row), prefer: 'return=representation', headers: {'Prefer':'return=representation,resolution=merge-duplicates'} });
-    return res ? res[0] : null;
+    // Never send local id - let DB auto-assign, use db_id for updates
+    const row = { wx: m.wx, bn: m.bn||'', char_name: m.char||'', cls: m.cls||'', role: m.role||'DPS', status: m.st||'在', dkp: m.dkp||0, note: m.note||'' };
+    if (m.db_id) {
+      // UPDATE existing
+      return await sbFetch(`members?id=eq.${m.db_id}`, 'PATCH', row, 'return=representation');
+    } else {
+      // INSERT new
+      const res = await sbFetch('members', 'POST', row, 'return=representation');
+      if (res && res[0]) { m.db_id = res[0].id; return res[0]; }
+      return null;
+    }
   },
   async updateMemberDkp(id, dkp) {
-    return await sbFetch(`members?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ dkp }) });
-  },
-  async deleteMember(id) {
-    return await sbFetch(`members?id=eq.${id}`, { method: 'DELETE', prefer: '' });
+    // id here is db_id
+    return await sbFetch(`members?id=eq.${id}`, 'PATCH', { dkp }, 'return=minimal');
   },
 
   // ── Events ──
   async getEvents() {
-    return await sbFetch('events?select=*&order=date.desc') || [];
+    return await sbFetch('events?select=*&order=date.desc,created_at.desc') || [];
   },
-  async upsertEvent(ev) {
-    const row = { name: ev.name, date: ev.date, time: ev.time, raid: ev.raid, note: ev.note, status: ev.status, roster: ev.roster };
-    if (ev.db_id) row.id = ev.db_id;
-    const res = await sbFetch('events', { method: 'POST', body: JSON.stringify(row), headers: {'Prefer':'return=representation,resolution=merge-duplicates'} });
-    return res ? res[0] : null;
+  async insertEvent(ev) {
+    const row = { name: ev.name, date: ev.date, time: ev.time||'20:00', raid: ev.raid||'', note: ev.note||'', status: ev.status||'planned', roster: ev.roster||[] };
+    const res = await sbFetch('events', 'POST', row, 'return=representation');
+    if (res && res[0]) { ev.db_id = res[0].id; return res[0]; }
+    return null;
   },
   async updateEventStatus(dbId, status) {
-    return await sbFetch(`events?id=eq.${dbId}`, { method: 'PATCH', body: JSON.stringify({ status }) });
+    return await sbFetch(`events?id=eq.${dbId}`, 'PATCH', { status }, 'return=minimal');
   },
   async updateEventRoster(dbId, roster) {
-    return await sbFetch(`events?id=eq.${dbId}`, { method: 'PATCH', body: JSON.stringify({ roster }) });
+    return await sbFetch(`events?id=eq.${dbId}`, 'PATCH', { roster }, 'return=minimal');
   },
 
   // ── DKP Logs ──
@@ -1252,9 +1266,8 @@ const db = {
     return await sbFetch(`dkp_logs?event_id=eq.${eventDbId}&select=*&order=created_at`) || [];
   },
   async insertDkpLog(eventDbId, log) {
-    const row = { event_id: eventDbId, type: log.type, amount: log.amount, scope: log.scope, members: log.members||[], note: log.note, log_time: log.time };
-    const res = await sbFetch('dkp_logs', { method: 'POST', body: JSON.stringify(row) });
-    return res ? res[0] : null;
+    const row = { event_id: eventDbId, type: log.type||'', amount: log.amount||0, scope: log.scope||'all', members: log.members||[], note: log.note||'', log_time: log.time||'' };
+    return await sbFetch('dkp_logs', 'POST', row, 'return=minimal');
   },
 
   // ── Loot Logs ──
@@ -1262,29 +1275,32 @@ const db = {
     return await sbFetch(`loot_logs?event_id=eq.${eventDbId}&select=*&order=created_at`) || [];
   },
   async insertLootLog(eventDbId, log) {
-    const row = { event_id: eventDbId, member_id: log.mid, item: log.item, quality: log.q, dkp: log.dkp, log_time: log.time };
-    const res = await sbFetch('loot_logs', { method: 'POST', body: JSON.stringify(row) });
-    return res ? res[0] : null;
+    const row = { event_id: eventDbId, member_id: log.member_db_id||null, item: log.item||'', quality: log.q||'normal', dkp: log.dkp||0, log_time: log.time||'' };
+    return await sbFetch('loot_logs', 'POST', row, 'return=minimal');
   },
 
   // ── Gear Types ──
   async getGearTypes() {
-    return await sbFetch('gear_types?select=*&order=sort_order') || [];
+    return await sbFetch('gear_types?select=*&order=sort_order,id') || [];
   },
-  async upsertGearType(g) {
-    const row = { name: g.name, price_normal: g.n, price_hero: g.h, price_epic: g.e, icon_url: g.icon||null, emoji: g.emoji||'🗡️', sort_order: g.sort_order||0 };
-    if (g.db_id) row.id = g.db_id;
-    const res = await sbFetch('gear_types', { method: 'POST', body: JSON.stringify(row), headers: {'Prefer':'return=representation,resolution=merge-duplicates'} });
-    return res ? res[0] : null;
+  async insertGearType(g) {
+    const row = { name: g.name, price_normal: g.n||0, price_hero: g.h||0, price_epic: g.e||0, icon_url: g.icon||null, emoji: g.emoji||'🗡️', sort_order: g.sort_order||0 };
+    const res = await sbFetch('gear_types', 'POST', row, 'return=representation');
+    if (res && res[0]) { g.db_id = res[0].id; return res[0]; }
+    return null;
+  },
+  async updateGearType(g) {
+    const row = { name: g.name, price_normal: g.n||0, price_hero: g.h||0, price_epic: g.e||0, icon_url: g.icon||null, emoji: g.emoji||'🗡️' };
+    return await sbFetch(`gear_types?id=eq.${g.db_id}`, 'PATCH', row, 'return=minimal');
   },
   async deleteGearType(dbId) {
-    return await sbFetch(`gear_types?id=eq.${dbId}`, { method: 'DELETE', prefer: '' });
+    return await sbFetch(`gear_types?id=eq.${dbId}`, 'DELETE', null, 'return=minimal');
   },
 };
 
 // ── Map DB rows → local format ──
 function rowToMember(r) {
-  return { id: r.id, wx: r.wx||'', bn: r.bn||'', char: r.char_name||'', cls: r.cls||'', role: r.role||'DPS', st: r.status||'在', dkp: r.dkp||0, note: r.note||'' };
+  return { id: r.id, db_id: r.id, wx: r.wx||'', bn: r.bn||'', char: r.char_name||'', cls: r.cls||'', role: r.role||'DPS', st: r.status||'在', dkp: r.dkp||0, note: r.note||'' };
 }
 function rowToEvent(r) {
   return { id: r.id, db_id: r.id, name: r.name, date: r.date, time: r.time||'20:00', raid: r.raid||'', note: r.note||'', status: r.status||'planned', roster: r.roster||[], dkpLog:[], lootLog:[] };
@@ -1308,11 +1324,11 @@ async function loadAllFromDB() {
     if (mRows.length > 0) {
       members = mRows.map(rowToMember);
     } else {
-      // First run: seed members to DB
+      // First run: seed members to DB (don't send local id)
       showLoadingOverlay('初始化团员数据...');
       for (const m of members) {
-        const res = await db.upsertMember(m);
-        if (res) m.id = res.id;
+        const res = await db.upsertMember(m); // upsertMember checks db_id, none yet so will INSERT
+        // db_id set inside upsertMember
       }
     }
 
@@ -1350,6 +1366,8 @@ async function loadAllFromDB() {
     }
 
     hideLoadingOverlay();
+    const dbDot = document.getElementById('db-status');
+    if (dbDot) { dbDot.style.background='#3a9a68'; dbDot.title='已连接数据库'; }
     initCal();
     renderMembers();
     renderDkp();
