@@ -486,18 +486,59 @@ body.viewer-mode .admin-only{display:none!important}
 
 <!-- GEAR PAGE -->
 <div class="pg" id="pg-gear">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-    <div class="stitle" style="margin:0;flex:none">装备类型管理</div>
-    <button class="btn btn-gold btn-sm admin-only" style="margin-left:auto" onclick="openGearTypeMo()">＋ 添加类型</button>
+  <!-- Gear page tabs -->
+  <div class="tabs" style="margin-bottom:18px">
+    <button class="tab on" onclick="switchGearTab('types',this)">🗂 装备类型</button>
+    <button class="tab" onclick="switchGearTab('items',this)">📦 掉落装备库</button>
+    <button class="tab" onclick="switchGearTab('log',this)">📋 分配记录</button>
   </div>
-  <div class="gear-layout">
-    <div>
-      <div id="gear-type-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px"></div>
+
+  <!-- Tab: 装备类型 -->
+  <div id="gtab-types">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <div class="stitle" style="margin:0;flex:none">装备类型 &amp; DKP定价</div>
+      <button class="btn btn-gold btn-sm admin-only" style="margin-left:auto" onclick="openGearTypeMo()">＋ 添加类型</button>
     </div>
-    <div class="gc">
-      <div class="stitle" style="font-size:10px">近期分装备记录</div>
-      <div id="gloot" style="max-height:480px;overflow-y:auto"></div>
+    <div id="gear-type-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px"></div>
+  </div>
+
+  <!-- Tab: 掉落装备库 -->
+  <div id="gtab-items" style="display:none">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <div class="stitle" style="margin:0;flex:none">掉落装备库</div>
+      <div style="display:flex;gap:8px;flex:1;flex-wrap:wrap">
+        <input class="fi" id="gi-search" placeholder="搜索装备名称…" oninput="renderGearItems()" style="max-width:200px">
+        <select class="fs" id="gi-raid-filter" onchange="renderGearItems()" style="max-width:160px">
+          <option value="">全部副本</option>
+          <option value="虚影尖塔">虚影尖塔</option>
+          <option value="梦境裂隙">梦境裂隙</option>
+          <option value="进军奎尔丹纳斯">进军奎尔丹纳斯</option>
+          <option value="自定义">自定义</option>
+        </select>
+        <select class="fs" id="gi-boss-filter" onchange="renderGearItems()" style="max-width:200px">
+          <option value="">全部Boss</option>
+        </select>
+      </div>
+      <button class="btn btn-gold btn-sm admin-only" onclick="openGearItemMo(null)">＋ 添加装备</button>
     </div>
+    <div class="tb-wrap">
+      <table>
+        <thead><tr>
+          <th>装备名称</th><th>部位</th><th>副本</th><th>Boss</th>
+          <th style="color:#f4e000">勇士</th>
+          <th style="color:#e84040">英雄</th>
+          <th style="color:#a335ee">史诗</th>
+          <th class="admin-only"></th>
+        </tr></thead>
+        <tbody id="gi-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab: 分配记录 -->
+  <div id="gtab-log" style="display:none">
+    <div class="stitle" style="margin-bottom:14px">近期装备分配记录</div>
+    <div id="gloot" style="max-height:600px;overflow-y:auto"></div>
   </div>
 </div>
 
@@ -631,45 +672,99 @@ body.viewer-mode .admin-only{display:none!important}
   </div>
 </div></div>
 
-<div class="mo" id="mo-loot"><div class="md" style="width:640px">
+<div class="mo" id="mo-loot"><div class="md" style="width:700px;max-height:92vh;overflow-y:auto">
   <div class="md-title">🎁 分配装备</div>
 
-  <!-- Step 1: Pick gear type -->
-  <div id="loot-step1">
-    <div class="fl" style="margin-bottom:10px">选择装备类型</div>
-    <input class="fi" id="l-search" placeholder="搜索装备类型…" oninput="renderLootTypeGrid(this.value)" style="margin-bottom:10px">
-    <div id="l-type-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;max-height:260px;overflow-y:auto"></div>
+  <!-- 模式切换 -->
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <button id="lmode-item" onclick="setLootMode('item')"
+      style="flex:1;padding:10px 0;border-radius:9px;border:2px solid var(--gold);background:rgba(201,168,76,.12);color:var(--gold);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;transition:.15s">
+      📦 具体装备<div style="font-size:10px;font-weight:400;color:var(--muted);margin-top:2px">按副本→Boss→装备选择</div>
+    </button>
+    <button id="lmode-type" onclick="setLootMode('type')"
+      style="flex:1;padding:10px 0;border-radius:9px;border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;transition:.15s">
+      🗂 装备类型<div style="font-size:10px;font-weight:400;color:var(--muted);margin-top:2px">按类型+DKP定价</div>
+    </button>
   </div>
 
-  <!-- Step 2: Pick quality + confirm item -->
-  <div id="loot-step2" style="display:none">
-    <button onclick="lootBackToStep1()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;font-family:inherit;padding:0;margin-bottom:14px;display:flex;align-items:center;gap:6px">← 重新选择</button>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:14px;background:var(--bg-card2);border:1px solid var(--border-hi);border-radius:10px">
-      <div id="l-selected-icon" style="width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;background:var(--bg-card);border:1px solid var(--border);flex-shrink:0"></div>
-      <div style="flex:1">
-        <div id="l-selected-name" style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px"></div>
-        <div style="font-size:11px;color:var(--muted)">选择品质后自动填入DKP</div>
+  <!-- ══ MODE A: 具体装备 ══ -->
+  <div id="loot-mode-item">
+    <!-- 面包屑 -->
+    <div id="loot-breadcrumb" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:12px;flex-wrap:wrap;min-height:20px"></div>
+    <!-- Step 1: 副本 -->
+    <div id="loot-step1">
+      <div class="fl" style="margin-bottom:10px">选择副本</div>
+      <div id="l-raid-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+    </div>
+    <!-- Step 2: Boss -->
+    <div id="loot-step2" style="display:none">
+      <div class="fl" style="margin-bottom:10px">选择 Boss</div>
+      <div id="l-boss-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px"></div>
+    </div>
+    <!-- Step 3: 具体装备 -->
+    <div id="loot-step3" style="display:none">
+      <input class="fi" id="l-item-search" placeholder="搜索装备名称…" oninput="renderLootItemGrid(this.value)" style="margin-bottom:10px">
+      <div id="l-item-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:200px;overflow-y:auto;margin-bottom:6px"></div>
+    </div>
+    <!-- Step 4: 品质 + 团员 -->
+    <div id="loot-step4" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:12px 14px;background:var(--bg-card2);border:1px solid var(--border-hi);border-radius:10px">
+        <div id="l-selected-icon" style="width:44px;height:44px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--bg-card);border:1px solid var(--border);flex-shrink:0;overflow:hidden"></div>
+        <div style="flex:1;min-width:0">
+          <div id="l-selected-name" style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px"></div>
+          <div id="l-selected-sub" style="font-size:11px;color:var(--muted)"></div>
+        </div>
       </div>
-    </div>
-    <div class="fg" style="margin-bottom:14px">
-      <label class="fl">品质 / 难度</label>
-      <div style="display:flex;gap:8px">
-        <button class="loot-qual-btn on" data-qual="normal" onclick="selectLootQual('normal',this)" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(244,224,0,.5);background:rgba(244,224,0,.1);color:#f4e000;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">勇士</button>
-        <button class="loot-qual-btn" data-qual="hero" onclick="selectLootQual('hero',this)" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(232,64,64,.3);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">英雄</button>
-        <button class="loot-qual-btn" data-qual="epic" onclick="selectLootQual('epic',this)" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(163,53,238,.3);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">史诗</button>
+      <div class="fg" style="margin-bottom:12px">
+        <label class="fl">品质 / 难度</label>
+        <div style="display:flex;gap:8px">
+          <button class="loot-qual-btn on" data-qual="normal" onclick="selectLootQual('normal',this)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(244,224,0,.5);background:rgba(244,224,0,.1);color:#f4e000;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">勇士</button>
+          <button class="loot-qual-btn" data-qual="hero" onclick="selectLootQual('hero',this)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(232,64,64,.3);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">英雄</button>
+          <button class="loot-qual-btn" data-qual="epic" onclick="selectLootQual('epic',this)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(163,53,238,.3);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">史诗</button>
+        </div>
       </div>
+      <div class="fg" style="margin-bottom:12px">
+        <label class="fl">扣除DKP</label>
+        <input class="fi" type="number" id="l-dkp" value="50">
+      </div>
+      <div class="fg" style="margin-bottom:8px"><label class="fl">选择获得装备的团员</label></div>
+      <div class="mpk" id="l-pk"></div>
     </div>
-    <div class="fg" style="margin-bottom:14px">
-      <label class="fl">扣除DKP</label>
-      <input class="fi" type="number" id="l-dkp" value="50">
+  </div>
+
+  <!-- ══ MODE B: 装备类型 ══ -->
+  <div id="loot-mode-type" style="display:none">
+    <input class="fi" id="l-type-search" placeholder="搜索装备类型…" oninput="renderLootTypeGrid(this.value)" style="margin-bottom:10px">
+    <div id="l-type-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;max-height:220px;overflow-y:auto;margin-bottom:14px"></div>
+    <!-- After type selected: quality + member -->
+    <div id="loot-type-step2" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:12px 14px;background:var(--bg-card2);border:1px solid var(--border-hi);border-radius:10px">
+        <div id="l-type-icon" style="width:44px;height:44px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--bg-card);border:1px solid var(--border);flex-shrink:0;overflow:hidden"></div>
+        <div style="flex:1">
+          <div id="l-type-name" style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px"></div>
+          <button onclick="resetLootTypeMode()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0;font-family:inherit">← 重新选择类型</button>
+        </div>
+      </div>
+      <div class="fg" style="margin-bottom:12px">
+        <label class="fl">品质 / 难度</label>
+        <div style="display:flex;gap:8px">
+          <button class="loot-qual-btn on" data-qual="normal" onclick="selectLootQual('normal',this)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(244,224,0,.5);background:rgba(244,224,0,.1);color:#f4e000;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">勇士</button>
+          <button class="loot-qual-btn" data-qual="hero" onclick="selectLootQual('hero',this)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(232,64,64,.3);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">英雄</button>
+          <button class="loot-qual-btn" data-qual="epic" onclick="selectLootQual('epic',this)" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(163,53,238,.3);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">史诗</button>
+        </div>
+      </div>
+      <div class="fg" style="margin-bottom:12px">
+        <label class="fl">扣除DKP</label>
+        <input class="fi" type="number" id="l-dkp-type" value="50">
+      </div>
+      <div class="fg" style="margin-bottom:8px"><label class="fl">选择获得装备的团员</label></div>
+      <div class="mpk" id="l-pk-type"></div>
     </div>
-    <div class="fg" style="margin-bottom:8px"><label class="fl">选择获得装备的团员</label></div>
-    <div class="mpk" id="l-pk"></div>
   </div>
 
   <div class="md-footer">
     <button class="btn btn-outline" onclick="closeMo('mo-loot')">取消</button>
-    <button class="btn btn-red" id="l-confirm-btn" style="display:none" onclick="confirmLoot()">确认扣分</button>
+    <button class="btn btn-red" id="l-confirm-btn" style="display:none" onclick="confirmLoot()">✓ 确认分配</button>
   </div>
 </div></div>
 
@@ -802,6 +897,7 @@ let gearTypes=[
 let wowItems=['主宰之盔','深渊铸造者之盔','虚空侵扰者面甲','夜之裂变护肩','深海之息护肩','暗影编织者胸甲','星空守护者胸甲','至暗之夜法袍','阴影之翼斗篷','虚空裂变腕甲','星光编织手套','深渊之爪手套','黑暗之心腰带','夜裂腿甲','暗影踏步靴','虚空裂变戒指','至暗信誓戒指','深渊之心项链','主宰力量饰品','星光之眼饰品','黑暗脉动饰品','阴影炮台主炮','虚空裂变巨剑','夜之终结弓','暗影之触法杖','星光匕首','深渊盾牌','阴影之矛','主宰之锤','虚空剑刃双刃'];
 
 let uid=100,curEvt=null,dbLoaded=false;
+let gearItems=[];
 let calY,calM,mainY,mainM,weekStart,calView='month';
 let dkpEvtId=null,lootEvtId=null,dkpSc='all',dkpSel=[],lootSel=null;
 let editMemId=null,mF='',rF='';
@@ -934,7 +1030,27 @@ function renderED(id){
     }
     return`<div class="lrow"><span class="lt">${l.time}</span><span class="lw" style="color:var(--green);min-width:60px">+${l.amount}</span><span class="li">${l.type}${l.note?' · '+l.note:''}</span><span class="la" style="text-align:right;min-width:120px">${who}</span></div>`;
   }).join('');
-  const lRows=e.lootLog.map(l=>{const m=members.find(x=>x.id===l.mid);return`<div class="lrow"><span class="lt">${l.time}</span><span class="lw" style="color:${m?clsColor(m.cls):'var(--muted)'}">${m?m.char||m.wx:'?'}</span><span class="li q-${l.q}">${l.item}</span><span class="la" style="color:var(--red)">-${l.dkp}</span></div>`;}).join('');
+  const lRows=e.lootLog.map(l=>{
+    const m=members.find(x=>x.id===l.mid);
+    const qLabel={normal:'勇士',hero:'英雄',epic:'史诗'}[l.q]||l.q;
+    const qColor={normal:'#f4e000',hero:'#e84040',epic:'#a335ee'}[l.q]||'var(--muted)';
+    const srcTag = l.source==='type'
+      ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(74,159,224,.12);color:var(--blue);border:1px solid rgba(74,159,224,.3)">类型</span>`
+      : `<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(201,168,76,.1);color:var(--gold);border:1px solid rgba(201,168,76,.3)">装备</span>`;
+    const subInfo = l.boss ? `<span style="color:var(--muted);font-size:10px"> · ${l.boss}</span>` : (l.slot?`<span style="color:var(--muted);font-size:10px"> · ${l.slot}</span>`:'');
+    return`<div class="lrow" style="align-items:flex-start;flex-wrap:wrap;gap:6px">
+      <span class="lt" style="flex-shrink:0">${l.time}</span>
+      <span class="lw" style="color:${m?clsColor(m.cls):'var(--muted)'};flex-shrink:0">${m?m.char||m.wx:'?'}</span>
+      <span style="flex:1;min-width:0">
+        <span class="li q-${l.q}" style="color:${qColor};font-weight:600">${l.item}</span>${subInfo}
+      </span>
+      <span style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        ${srcTag}
+        <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:${qColor}18;color:${qColor};border:1px solid ${qColor}44">${qLabel}</span>
+        <span style="color:var(--red);font-weight:600;min-width:50px;text-align:right">-${l.dkp}</span>
+      </span>
+    </div>`;
+  }).join('');
   const totDkp=e.dkpLog.reduce((a,l)=>a+l.amount,0);
   const totLoot=e.lootLog.reduce((a,l)=>a+l.dkp,0);
   document.getElementById('ed-inner').innerHTML=`
@@ -1069,27 +1185,224 @@ function confirmDkp(){
   closeMo('mo-dkp');renderED(dkpEvtId);toast(`已为 ${tgts.length} 人加 ${amt} DKP ✨`,'ok');
 }
 
-let lootSelGearType = null;
+let lootSelItem = null;   // selected gear_item object
+let lootSelRaid = null;
+let lootSelBoss = null;
 let lootSelQual = 'normal';
+// Keep lootSelGearType for DKP price fallback (from gear_types)
+let lootSelGearType = null;
+let lootStep = 1;
+
+const RAID_INFO = {
+  '虚影尖塔':       { emoji:'🗼', color:'#6a4adc', bosses:['元首阿福扎恩','弗拉希乌斯','陨落之王萨哈达尔','威厄高尔和艾佐拉克','瑟恩·贝莱梅·光血','宇宙之冕'] },
+  '梦境裂隙':       { emoji:'🌙', color:'#2a9a6a', bosses:['奇美鲁斯'] },
+  '进军奎尔丹纳斯': { emoji:'☀️', color:'#c9a030', bosses:['贝洛朗','鲁拉'] },
+};
+
+let lootMode = 'item'; // 'item' | 'type'
+let lootTypeSel = null; // selected in type mode
 
 function openLootMo(id){
-  lootEvtId=id; lootSel=null; lootSelGearType=null; lootSelQual='normal';
-  lootBackToStep1();
-  sv('l-search','');
-  renderLootTypeGrid('');
+  lootEvtId=id; lootSel=null; lootSelItem=null; lootSelRaid=null; lootSelBoss=null;
+  lootSelGearType=null; lootSelQual='normal'; lootTypeSel=null;
+  // Build member lists for both modes
   const e=events.find(x=>x.id===id);
   const ms=(e?e.roster:[]).map(i=>members.find(m=>m.id===i)).filter(Boolean);
-  document.getElementById('l-pk').innerHTML=ms.map(m=>`<div class="pcard" id="lp-${m.id}" onclick="selLoot(${m.id})"><div class="pc-n" style="color:${clsColor(m.cls)};font-weight:600">${m.char||m.wx}</div><div class="pc-d" style="color:${clsColor(m.cls)}66;font-size:10px">${m.cls} · ${m.dkp} DKP</div></div>`).join('');
+  const memberCards = ms.map(m=>`<div class="pcard" id="lp-${m.id}" onclick="selLoot(${m.id})"><div class="pc-n" style="color:${clsColor(m.cls)};font-weight:600">${m.char||m.wx}</div><div class="pc-d" style="color:${clsColor(m.cls)}66;font-size:10px">${m.cls} · ${m.dkp} DKP</div></div>`).join('');
+  document.getElementById('l-pk').innerHTML = memberCards;
+  document.getElementById('l-pk-type').innerHTML = memberCards.replace(/onclick="selLoot\((\d+)\)"/g, 'onclick="selLootType($1)"').replace(/id="lp-/g,'id="lpt-');
+  setLootMode(lootMode); // restore last mode
   openMo('mo-loot');
 }
 
+function setLootMode(mode) {
+  lootMode = mode;
+  // Update toggle buttons
+  const btnItem = document.getElementById('lmode-item');
+  const btnType = document.getElementById('lmode-type');
+  if(mode==='item') {
+    btnItem.style.borderColor='var(--gold)'; btnItem.style.background='rgba(201,168,76,.12)'; btnItem.style.color='var(--gold)';
+    btnType.style.borderColor='var(--border)'; btnType.style.background='transparent'; btnType.style.color='var(--muted)';
+    document.getElementById('loot-mode-item').style.display='';
+    document.getElementById('loot-mode-type').style.display='none';
+    // Reset item mode
+    lootGoStep(1);
+  } else {
+    btnType.style.borderColor='var(--gold)'; btnType.style.background='rgba(201,168,76,.12)'; btnType.style.color='var(--gold)';
+    btnItem.style.borderColor='var(--border)'; btnItem.style.background='transparent'; btnItem.style.color='var(--muted)';
+    document.getElementById('loot-mode-type').style.display='';
+    document.getElementById('loot-mode-item').style.display='none';
+    document.getElementById('l-confirm-btn').style.display='none';
+    resetLootTypeMode();
+    sv('l-type-search','');
+    renderLootTypeGrid('');
+  }
+}
+
+function resetLootTypeMode() {
+  lootTypeSel=null; lootSelGearType=null;
+  document.getElementById('loot-type-step2').style.display='none';
+  document.getElementById('l-type-grid').style.display='';
+  document.getElementById('l-type-search').style.display='';
+  document.getElementById('l-confirm-btn').style.display='none';
+}
+
+// Type mode member selection
+let lootSelType = null;
+function selLootType(id) {
+  if(lootSelType!==null) document.getElementById(`lpt-${lootSelType}`)?.classList.remove('on');
+  lootSelType=id;
+  document.getElementById(`lpt-${id}`)?.classList.add('on');
+}
+
+function lootGoStep(step) {
+  lootStep = step;
+  [1,2,3,4].forEach(n => {
+    const el = document.getElementById('loot-step'+n);
+    if(el) el.style.display = n===step ? '' : 'none';
+  });
+  document.getElementById('l-confirm-btn').style.display = step===4 ? '' : 'none';
+  updateLootBreadcrumb();
+  if(step===1) renderLootRaidGrid();
+  if(step===2) renderLootBossGrid();
+  if(step===3) { sv('l-item-search',''); renderLootItemGrid(''); }
+}
+
+function updateLootBreadcrumb() {
+  const bc = document.getElementById('loot-breadcrumb');
+  if(!bc) return;
+  let html = `<span style="cursor:pointer;color:${lootStep>1?'var(--gold)':'var(--muted)'}" onclick="lootGoStep(1)">副本</span>`;
+  if(lootSelRaid) html += `<span style="color:var(--muted)"> › </span><span style="cursor:pointer;color:${lootStep>2?'var(--gold)':'var(--text)'}" onclick="lootGoStep(2)">${lootSelRaid}</span>`;
+  if(lootSelBoss) html += `<span style="color:var(--muted)"> › </span><span style="cursor:pointer;color:${lootStep>3?'var(--gold)':'var(--text)'}" onclick="lootGoStep(3)">${lootSelBoss}</span>`;
+  if(lootSelItem) html += `<span style="color:var(--muted)"> › </span><span style="color:var(--text)">${lootSelItem.name}</span>`;
+  bc.innerHTML = html;
+}
+
+function renderLootRaidGrid() {
+  const raids = Object.keys(RAID_INFO);
+  const customCnt = gearItems.filter(g=>g.raid==='自定义').length;
+  document.getElementById('l-raid-grid').innerHTML = raids.map(r => {
+    const info = RAID_INFO[r];
+    const cnt = gearItems.filter(g=>g.raid===r).length;
+    return `<div onclick="selectLootRaid('${r}')"
+      style="background:var(--bg-card2);border:1px solid var(--border);border-top:3px solid ${info.color};border-radius:10px;padding:16px 12px;cursor:pointer;text-align:center;transition:.15s"
+      onmouseover="this.style.borderColor='${info.color}';this.style.background='var(--bg-card3)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.borderTopColor='${info.color}';this.style.background='var(--bg-card2)'">
+      <div style="font-size:28px;margin-bottom:8px">${info.emoji}</div>
+      <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px">${r}</div>
+      <div style="font-size:11px;color:var(--muted)">${info.bosses.length} 个Boss · ${cnt} 件</div>
+    </div>`;
+  }).join('') + `<div onclick="selectCustomLootItem()"
+    style="background:transparent;border:1px dashed var(--border);border-top:3px dashed var(--muted);border-radius:10px;padding:16px 12px;cursor:pointer;text-align:center;transition:.15s"
+    onmouseover="this.style.borderColor='var(--gold)'"
+    onmouseout="this.style.borderTopColor='var(--muted)';this.style.borderColor='var(--border)'">
+    <div style="font-size:28px;margin-bottom:8px">✏️</div>
+    <div style="font-weight:700;font-size:13px;color:var(--muted);margin-bottom:4px">自定义</div>
+    <div style="font-size:11px;color:var(--muted)">坐骑 · 图纸 · 其他</div>
+  </div>`;
+}
+
+function selectLootRaid(raid) {
+  lootSelRaid = raid;
+  lootSelBoss = null; lootSelItem = null;
+  lootGoStep(2);
+}
+
+function renderLootBossGrid() {
+  const info = RAID_INFO[lootSelRaid];
+  if(!info) return;
+  document.getElementById('l-boss-grid').innerHTML = info.bosses.map((boss,i) => {
+    const cnt = gearItems.filter(g=>g.raid===lootSelRaid&&g.boss===boss).length;
+    return `<div onclick="selectLootBoss('${boss.replace(/'/g,"\'")}')"
+      style="background:var(--bg-card2);border:1px solid var(--border);border-radius:9px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:.15s"
+      onmouseover="this.style.borderColor='var(--gold)';this.style.background='var(--bg-card3)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg-card2)'">
+      <div style="width:28px;height:28px;border-radius:50%;background:${info.color}22;border:1px solid ${info.color}44;display:flex;align-items:center;justify-content:center;font-size:12px;color:${info.color};font-weight:700;flex-shrink:0">${i+1}</div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)">${boss}</div>
+        <div style="font-size:11px;color:var(--muted)">${cnt} 件掉落</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectLootBoss(boss) {
+  lootSelBoss = boss;
+  lootSelItem = null;
+  lootGoStep(3);
+}
+
+function renderLootItemGrid(q) {
+  const pool = gearItems.filter(g => g.raid===lootSelRaid && g.boss===lootSelBoss);
+  const filtered = q ? pool.filter(g=>g.name.includes(q)||g.slot.includes(q)) : pool;
+  // Slot type color
+  const slotColor = s => s.includes('武器')||s.includes('套装')?'#c9a84c':s.includes('饰品')||s.includes('项链')||s.includes('戒指')||s.includes('披风')?'#4a9fe0':'var(--muted)';
+  const itemCards = filtered.map(g =>
+    `<div onclick="selectLootItem(${g.id})"
+      style="background:var(--bg-card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;transition:.15s;display:flex;align-items:flex-start;gap:8px"
+      onmouseover="this.style.borderColor='var(--gold)';this.style.background='var(--bg-card3)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg-card2)'">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</div>
+        <div style="font-size:10px;color:${slotColor(g.slot)}">${g.slot}</div>
+      </div>
+      <div style="font-size:10px;text-align:right;flex-shrink:0;color:var(--muted)">
+        <div style="color:#f4e000">${g.n}</div>
+        <div style="color:#e84040">${g.h}</div>
+        <div style="color:#a335ee">${g.e}</div>
+      </div>
+    </div>`
+  ).join('');
+  // Always show a custom item option at the end
+  const customBtn = `<div onclick="selectCustomLootItem()"
+    style="background:transparent;border:1px dashed var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:8px;grid-column:1/-1"
+    onmouseover="this.style.borderColor='var(--gold)'"
+    onmouseout="this.style.borderColor='var(--border)'">
+    <span style="font-size:18px">✏️</span>
+    <div>
+      <div style="font-size:13px;font-weight:600;color:var(--muted)">自定义装备 / 坐骑 / 图纸</div>
+      <div style="font-size:11px;color:var(--muted)">手动输入名称，适合随机掉落</div>
+    </div>
+  </div>`;
+  document.getElementById('l-item-grid').innerHTML = (itemCards||'') + customBtn;
+}
+
+function selectCustomLootItem() {
+  // Show step4 with a text input for custom item name
+  lootSelItem = null;
+  lootGoStep(4);
+  document.getElementById('l-selected-icon').innerHTML = '✏️';
+  document.getElementById('l-selected-name').innerHTML =
+    `<input class="fi" id="l-custom-item-name" placeholder="输入装备/坐骑/图纸名称…" style="font-size:13px;padding:6px 10px;width:100%">`;
+  document.getElementById('l-selected-sub').textContent = '自定义物品';
+  sv('l-dkp', 0);
+  selectLootQual('normal', document.querySelector('.loot-qual-btn[data-qual="normal"]'));
+}
+
+function selectLootItem(itemId) {
+  const g = gearItems.find(x=>x.id===itemId);
+  if(!g) return;
+  lootSelItem = g;
+  lootGoStep(4);
+  // Fill preview
+  const wowIco = slotIconUrl(g.slot||g.name);
+  const iconEl = document.getElementById('l-selected-icon');
+  if(wowIco) iconEl.innerHTML=`<img src="${wowIco}" style="width:100%;height:100%;object-fit:cover">`;
+  else iconEl.innerHTML='🗡️';
+  document.getElementById('l-selected-name').textContent = g.name;
+  document.getElementById('l-selected-sub').textContent = `${g.raid} · ${g.boss} · ${g.slot}`;
+  // Default quality
+  selectLootQual('normal', document.querySelector('.loot-qual-btn[data-qual="normal"]'));
+}
+
+// Legacy: keep lootBackToStep1 for compatibility
+function lootBackToStep1() { lootGoStep(1); }
+
+// renderLootTypeGrid kept for gear management page
 function renderLootTypeGrid(q) {
-  const filtered = q
-    ? gearTypes.filter(g => g.name.toLowerCase().includes(q.toLowerCase()))
-    : gearTypes;
-  // WoW quality: 勇士=yellow, 英雄=red, 史诗=purple
+  const filtered = q ? gearTypes.filter(g=>g.name.toLowerCase().includes(q.toLowerCase())) : gearTypes;
   const qColor = {normal:'#f4e000', hero:'#e84040', epic:'#a335ee'};
-  document.getElementById('l-type-grid').innerHTML = filtered.map(g => {
+  document.getElementById('l-type-grid')?.innerHTML && (document.getElementById('l-type-grid').innerHTML = filtered.map(g => {
     const wowIco = slotIconUrl(g.name);
     let iconHtml;
     if(g.icon){iconHtml=`<img src="${g.icon}" style="width:32px;height:32px;object-fit:cover;border-radius:6px">`;}
@@ -1102,74 +1415,72 @@ function renderLootTypeGrid(q) {
       ${iconHtml}
       <div style="font-size:12px;font-weight:600;color:var(--text)">${g.name}</div>
       <div style="font-size:10px;display:flex;gap:4px">
-        <span style="color:${qColor.normal}">${g.n}</span>
-        <span style="color:var(--muted)">/</span>
-        <span style="color:${qColor.hero}">${g.h}</span>
-        <span style="color:var(--muted)">/</span>
+        <span style="color:${qColor.normal}">${g.n}</span><span style="color:var(--muted)">/</span>
+        <span style="color:${qColor.hero}">${g.h}</span><span style="color:var(--muted)">/</span>
         <span style="color:${qColor.epic}">${g.e}</span>
       </div>
     </div>`;
-  }).join('') || '<div style="color:var(--muted);padding:20px;text-align:center;grid-column:1/-1">暂无装备类型</div>';
+  }).join(''));
 }
 
 function selectLootType(gearTypeId) {
-  const g = gearTypes.find(x => x.id === gearTypeId);
-  if (!g) return;
+  const g = gearTypes.find(x=>x.id===gearTypeId);
+  if(!g) return;
   lootSelGearType = g;
-  document.getElementById('loot-step1').style.display = 'none';
-  document.getElementById('loot-step2').style.display = 'block';
-  document.getElementById('l-confirm-btn').style.display = '';
-  const iconEl = document.getElementById('l-selected-icon');
+  lootTypeSel = g;
+  // Show type step 2
+  document.getElementById('l-type-grid').style.display='none';
+  document.getElementById('l-type-search').style.display='none';
+  document.getElementById('loot-type-step2').style.display='';
+  document.getElementById('l-confirm-btn').style.display='';
+  // Fill icon + name
   const wI = slotIconUrl(g.name);
+  const iconEl = document.getElementById('l-type-icon');
   if(g.icon){iconEl.innerHTML=`<img src="${g.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`;}
-  else if(wI){iconEl.innerHTML=`<img src="${wI}" style="width:100%;height:100%;object-fit:cover;border-radius:8px" onerror="this.innerHTML='${g.emoji||'🗡️'}'">` ;}
+  else if(wI){iconEl.innerHTML=`<img src="${wI}" style="width:100%;height:100%;object-fit:cover;border-radius:8px" onerror="this.style.display='none'">`;}
   else{iconEl.innerHTML=g.emoji||'🗡️';}
-  document.getElementById('l-selected-name').textContent = g.name;
+  document.getElementById('l-type-name').textContent=g.name;
+  // Default quality + DKP
+  sv('l-dkp-type', g.n||0);
   selectLootQual('normal', document.querySelector('.loot-qual-btn[data-qual="normal"]'));
 }
 
-function lootBackToStep1() {
-  const s1=document.getElementById('loot-step1');
-  const s2=document.getElementById('loot-step2');
-  const cb=document.getElementById('l-confirm-btn');
-  if(s1) s1.style.display='';
-  if(s2) s2.style.display='none';
-  if(cb) cb.style.display='none';
-  lootSelGearType=null;
-}
-
-function selectLootQual(qual, btn) {
-  lootSelQual = qual;
-  const qColor   = {normal:'#f4e000', hero:'#e84040', epic:'#a335ee'};
-  const qBg      = {normal:'rgba(244,224,0,.1)', hero:'rgba(232,64,64,.12)', epic:'rgba(163,53,238,.12)'};
-  const qBorder  = {normal:'rgba(244,224,0,.6)', hero:'rgba(232,64,64,.6)', epic:'rgba(163,53,238,.6)'};
-  const qBorderDim={normal:'rgba(244,224,0,.25)',hero:'rgba(232,64,64,.25)',epic:'rgba(163,53,238,.25)'};
-  document.querySelectorAll('.loot-qual-btn').forEach(b => {
-    const q = b.dataset.qual;
-    b.style.color = 'var(--muted)';
-    b.style.background = 'transparent';
-    b.style.borderColor = qBorderDim[q];
-  });
-  if (btn) {
-    btn.style.color = qColor[qual];
-    btn.style.background = qBg[qual];
-    btn.style.borderColor = qBorder[qual];
-  }
-  if (lootSelGearType) {
-    sv('l-dkp', {normal:lootSelGearType.n, hero:lootSelGearType.h, epic:lootSelGearType.e}[qual] || 0);
-  }
-}
-function selLoot(id){if(lootSel!==null)document.getElementById(`lp-${lootSel}`)?.classList.remove('on');lootSel=id;document.getElementById(`lp-${id}`)?.classList.add('on');}
 function confirmLoot(){
-  if(!lootSel){toast('请选择团员','err');return;}
-  if(!lootSelGearType){toast('请选择装备类型','err');return;}
-  const m=members.find(x=>x.id===lootSel);
-  const dkp=parseInt(gv('l-dkp'))||0;
-  const item=lootSelGearType.name;
-  const q=lootSelQual;
+  let targetMemberId, dkp, item, q;
+  if(lootMode==='type') {
+    // Type mode
+    targetMemberId = lootSelType;
+    if(!targetMemberId){toast('请选择团员','err');return;}
+    if(!lootSelGearType){toast('请选择装备类型','err');return;}
+    dkp = parseInt(document.getElementById('l-dkp-type')?.value)||0;
+    item = lootSelGearType.name;
+    q = lootSelQual;
+  } else {
+    // Item mode
+    targetMemberId = lootSel;
+    if(!targetMemberId){toast('请选择团员','err');return;}
+    if(!lootSelItem && !lootSelGearType){toast('请选择装备','err');return;}
+    dkp = parseInt(gv('l-dkp'))||0;
+    const customInput = document.getElementById('l-custom-item-name');
+    item = customInput ? customInput.value.trim() : (lootSelItem?lootSelItem.name:lootSelGearType?.name||'未知装备');
+    if(!item){toast('请填写装备名称','err');return;}
+    q = lootSelQual;
+  }
+  const m=members.find(x=>x.id===targetMemberId);
+  if(!m){toast('找不到团员','err');return;}
   const e=events.find(x=>x.id===lootEvtId);
   m.dkp-=dkp;
-  const llog={mid:lootSel,member_db_id:m.db_id||m.id,item,q,dkp,time:nowT()};
+  // Enrich log with source info
+  const llog={
+    mid: targetMemberId,
+    member_db_id: m.db_id||m.id,
+    item, q, dkp,
+    time: nowT(),
+    source: lootMode,                                        // 'item' | 'type'
+    boss:   lootMode==='item' ? (lootSelItem?.boss||'')  : '',
+    raid:   lootMode==='item' ? (lootSelItem?.raid||'')  : '',
+    slot:   lootMode==='item' ? (lootSelItem?.slot||'')  : (lootSelGearType?.name||''),
+  };
   e?.lootLog.push(llog);
   if(e?.db_id){
     db.insertLootLog(e.db_id, llog);
@@ -1392,13 +1703,188 @@ function saveGearType(){
   closeMo('mo-gear-type');renderGear();toast(`已添加「${name}」`,'ok');
 }
 function addGear(){openGearTypeMo();}
+// ══ GEAR TAB SWITCH ══
+function switchGearTab(tab, el) {
+  ['types','items','log'].forEach(t => {
+    document.getElementById('gtab-'+t).style.display = t===tab ? '' : 'none';
+  });
+  el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  if(tab==='items') { updateGiBossFilter(); renderGearItems(); }
+  if(tab==='log') renderGloot();
+  if(tab==='types') renderGear();
+}
+
+// ══ GEAR ITEMS TABLE ══
+const BOSS_MAP = {
+  '虚影尖塔': ['元首阿福扎恩','弗拉希乌斯','陨落之王萨哈达尔','威厄高尔和艾佐拉克','瑟恩·贝莱梅·光血','宇宙之冕'],
+  '梦境裂隙': ['奇美鲁斯'],
+  '进军奎尔丹纳斯': ['贝洛朗','鲁拉'],
+  '自定义': [],
+};
+
+function updateGiBossFilter() {
+  const raid = document.getElementById('gi-raid-filter')?.value || '';
+  const sel = document.getElementById('gi-boss-filter');
+  if(!sel) return;
+  const bosses = raid && BOSS_MAP[raid] ? BOSS_MAP[raid] : [...new Set(gearItems.map(g=>g.boss).filter(Boolean))];
+  sel.innerHTML = '<option value="">全部Boss</option>' + bosses.map(b=>`<option value="${b}">${b}</option>`).join('');
+}
+
+function renderGearItems() {
+  const q = (document.getElementById('gi-search')?.value||'').toLowerCase();
+  const raid = document.getElementById('gi-raid-filter')?.value||'';
+  const boss = document.getElementById('gi-boss-filter')?.value||'';
+  updateGiBossFilter();
+  const admin = typeof isAdmin!=='undefined' && isAdmin;
+  let list = gearItems;
+  if(raid) list = list.filter(g=>g.raid===raid);
+  if(boss) list = list.filter(g=>g.boss===boss);
+  if(q) list = list.filter(g=>g.name.toLowerCase().includes(q)||g.slot.toLowerCase().includes(q));
+  const tbody = document.getElementById('gi-tbody');
+  if(!tbody) return;
+  if(!list.length) { tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px">暂无装备数据</td></tr>`; return; }
+  tbody.innerHTML = list.map(g => `<tr>
+    <td><strong style="color:var(--text)">${g.name}</strong></td>
+    <td style="color:var(--muted);font-size:12px">${g.slot||'—'}</td>
+    <td><span class="badge b-muted">${g.raid||'—'}</span></td>
+    <td style="font-size:12px;color:var(--muted)">${g.boss||'—'}</td>
+    <td style="color:#f4e000;font-weight:600">${g.n}</td>
+    <td style="color:#e84040;font-weight:600">${g.h}</td>
+    <td style="color:#a335ee;font-weight:600">${g.e}</td>
+    <td class="admin-only" style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" onclick="openGearItemMo(${g.id})" style="padding:3px 10px;margin-right:4px">编辑</button>
+      <button class="btn btn-red btn-sm" onclick="deleteGearItem(${g.id})" style="padding:3px 8px">删除</button>
+    </td>
+  </tr>`).join('');
+}
+
+// ══ GEAR ITEM MODAL ══
+let editGearItemId = null;
+
+function openGearItemMo(id) {
+  editGearItemId = id;
+  const gim = id ? gearItems.find(g=>g.id===id) : null;
+  document.getElementById('gim-title').textContent = id ? '编辑装备' : '添加装备';
+  document.getElementById('gim-name').value = gim?.name || '';
+  document.getElementById('gim-slot').value = gim?.slot || '';
+  document.getElementById('gim-n').value = gim?.n ?? 60;
+  document.getElementById('gim-h').value = gim?.h ?? 90;
+  document.getElementById('gim-e').value = gim?.e ?? 140;
+  const raid = gim?.raid || '虚影尖塔';
+  document.getElementById('gim-raid').value = raid;
+  updateGimBossOptions();
+  // Set boss after options are populated
+  setTimeout(() => {
+    const bossSel = document.getElementById('gim-boss-sel');
+    const bossCustom = document.getElementById('gim-boss-custom');
+    const boss = gim?.boss || '';
+    if(BOSS_MAP[raid] && BOSS_MAP[raid].includes(boss)) {
+      bossSel.value = boss;
+      bossCustom.style.display = 'none';
+    } else if(boss) {
+      bossSel.value = '__custom__';
+      bossCustom.style.display = '';
+      bossCustom.value = boss;
+    }
+  }, 20);
+  openMo('mo-gear-item');
+}
+
+function updateGimBossOptions() {
+  const raid = document.getElementById('gim-raid')?.value || '';
+  const bossSel = document.getElementById('gim-boss-sel');
+  const bosses = BOSS_MAP[raid] || [];
+  bossSel.innerHTML = '<option value="">选择Boss…</option>' +
+    bosses.map(b=>`<option value="${b}">${b}</option>`).join('') +
+    '<option value="__custom__">✏️ 自定义输入…</option>';
+  document.getElementById('gim-boss-custom').style.display = 'none';
+  document.getElementById('gim-boss-custom').value = '';
+}
+
+function onGimBossChange(sel) {
+  const custom = document.getElementById('gim-boss-custom');
+  if(sel.value === '__custom__') { custom.style.display=''; custom.focus(); }
+  else { custom.style.display='none'; custom.value=''; }
+}
+
+async function saveGearItem() {
+  const name = document.getElementById('gim-name').value.trim();
+  if(!name) { toast('请填写装备名称','err'); return; }
+  const bossSel = document.getElementById('gim-boss-sel').value;
+  const bossCustom = document.getElementById('gim-boss-custom').value.trim();
+  const boss = bossSel==='__custom__' ? bossCustom : bossSel;
+  const item = {
+    id: editGearItemId,
+    name,
+    slot: document.getElementById('gim-slot').value.trim(),
+    raid: document.getElementById('gim-raid').value,
+    boss,
+    n: parseInt(document.getElementById('gim-n').value)||0,
+    h: parseInt(document.getElementById('gim-h').value)||0,
+    e: parseInt(document.getElementById('gim-e').value)||0,
+  };
+  if(editGearItemId) {
+    // Update existing
+    const existing = gearItems.find(g=>g.id===editGearItemId);
+    if(existing) Object.assign(existing, item);
+    await db.updateGearItem(item);
+    toast(`已更新「${name}」`,'ok');
+  } else {
+    // Insert new
+    gearItems.push(item);
+    await db.insertGearItem(item);
+    toast(`已添加「${name}」`,'ok');
+  }
+  closeMo('mo-gear-item');
+  renderGearItems();
+}
+
+async function deleteGearItem(id) {
+  const g = gearItems.find(x=>x.id===id);
+  if(!g) return;
+  if(!confirm(`确定删除装备「${g.name}」？`)) return;
+  await db.deleteGearItem(id);
+  gearItems = gearItems.filter(x=>x.id!==id);
+  renderGearItems();
+  toast('已删除','ok');
+}
+
 function renderGloot(){
-  const all=events.flatMap(e=>e.lootLog.map(l=>({...l,en:e.name})));
-  all.sort((a,b)=>b.time.localeCompare(a.time));
-  document.getElementById('gloot').innerHTML=all.slice(0,30).map(l=>{
-    const m=members.find(x=>x.id===l.mid);
-    return`<div class="lrow" style="margin-bottom:4px"><span class="lw" style="color:${m?clsColor(m.cls):'var(--muted)'}">${m?m.char||m.wx:'?'}</span><span class="li q-${l.q}">${l.item}</span><span class="la" style="color:var(--red)">-${l.dkp}</span></div>`;
-  }).join('')||'<div style="color:var(--muted);padding:12px;text-align:center">暂无记录</div>';
+  const all=events.flatMap(e=>e.lootLog.map(l=>({...l,en:e.name,eid:e.id})));
+  all.sort((a,b)=>{
+    if(b.time && a.time) return b.time.localeCompare(a.time);
+    return b.eid-a.eid;
+  });
+  if(!all.length){
+    document.getElementById('gloot').innerHTML='<div style="color:var(--muted);padding:24px;text-align:center">暂无分配记录</div>';
+    return;
+  }
+  document.getElementById('gloot').innerHTML=`
+    <div class="tb-wrap"><table>
+      <thead><tr>
+        <th>时间</th><th>团员</th><th>装备</th><th>来源</th>
+        <th>Boss</th><th style="color:#f4e000">品质</th>
+        <th style="color:var(--red)">DKP</th><th>活动</th>
+      </tr></thead>
+      <tbody>${all.slice(0,60).map(l=>{
+        const m=members.find(x=>x.id===l.mid);
+        const qLabel={normal:'勇士',hero:'英雄',epic:'史诗'}[l.q]||l.q;
+        const qColor={normal:'#f4e000',hero:'#e84040',epic:'#a335ee'}[l.q]||'var(--muted)';
+        const srcLabel = l.source==='type' ? '按类型' : (l.source==='item'?'按装备':'—');
+        const srcColor = l.source==='type' ? 'var(--blue)' : 'var(--gold)';
+        return`<tr>
+          <td style="color:var(--muted);font-size:11px;white-space:nowrap">${l.time||'—'}</td>
+          <td style="color:${m?clsColor(m.cls):'var(--muted)'};font-weight:600">${m?m.char||m.wx:'?'}</td>
+          <td style="font-weight:600;color:${qColor}">${l.item}</td>
+          <td style="font-size:11px;color:${srcColor}">${srcLabel}</td>
+          <td style="font-size:11px;color:var(--muted)">${l.boss||l.slot||'—'}</td>
+          <td><span style="color:${qColor};font-size:11px;font-weight:600">${qLabel}</span></td>
+          <td style="color:var(--red);font-weight:600">-${l.dkp}</td>
+          <td style="font-size:11px;color:var(--muted);max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.en||'—'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
 }
 
 // ══ NAV ══
@@ -1409,7 +1895,7 @@ function showPg(p){
   document.getElementById('nav-'+p)?.classList.add('on');
   if(p==='members')renderMembers();
   if(p==='dkp')renderDkp();
-  if(p==='gear'){renderGear();renderGloot();}
+  if(p==='gear'){renderGear();renderGloot();renderGearItems();}
 }
 function toggleTheme(){
   document.body.classList.toggle('light-mode');
@@ -1699,12 +2185,43 @@ const db = {
     return await sbFetch('dkp_logs', 'POST', row, 'return=minimal');
   },
 
+  // ── Gear Items (specific loot drops by raid/boss) ──
+  async getGearItems() {
+    return await sbFetch('gear_items?select=*&order=raid,boss,id') || [];
+  },
+
+  // ── Gear Items CRUD ──
+  async insertGearItem(item) {
+    const row = { name: item.name, slot: item.slot||'', boss: item.boss||'', raid: item.raid||'', price_normal: item.n||0, price_hero: item.h||0, price_epic: item.e||0 };
+    const res = await sbFetch('gear_items', 'POST', row, 'return=representation');
+    if(res && res[0]) { item.id = res[0].id; return res[0]; }
+    return null;
+  },
+  async updateGearItem(item) {
+    const row = { name: item.name, slot: item.slot||'', boss: item.boss||'', raid: item.raid||'', price_normal: item.n||0, price_hero: item.h||0, price_epic: item.e||0 };
+    return await sbFetch(`gear_items?id=eq.${item.id}`, 'PATCH', row, 'return=minimal');
+  },
+  async deleteGearItem(id) {
+    return await sbFetch(`gear_items?id=eq.${id}`, 'DELETE', null, 'return=minimal');
+  },
+
   // ── Loot Logs ──
   async getLootLogs(eventDbId) {
     return await sbFetch(`loot_logs?event_id=eq.${eventDbId}&select=*&order=created_at`) || [];
   },
   async insertLootLog(eventDbId, log) {
-    const row = { event_id: eventDbId, member_id: log.member_db_id||null, item: log.item||'', quality: log.q||'normal', dkp: log.dkp||0, log_time: log.time||'' };
+    const row = {
+      event_id: eventDbId,
+      member_id: log.member_db_id||null,
+      item: log.item||'',
+      quality: log.q||'normal',
+      dkp: log.dkp||0,
+      log_time: log.time||'',
+      source_type: log.source||'item',
+      boss: log.boss||'',
+      raid: log.raid||'',
+      slot: log.slot||'',
+    };
     return await sbFetch('loot_logs', 'POST', row, 'return=minimal');
   },
 
@@ -1738,7 +2255,17 @@ function rowToDkpLog(r) {
   return { type: r.type, amount: r.amount, scope: r.scope, members: r.members||[], note: r.note||'', time: r.log_time||'' };
 }
 function rowToLootLog(r) {
-  return { mid: r.member_id, item: r.item, q: r.quality, dkp: r.dkp, time: r.log_time||'' };
+  return {
+    mid: r.member_id,
+    item: r.item,
+    q: r.quality,
+    dkp: r.dkp,
+    time: r.log_time||'',
+    source: r.source_type||'item',
+    boss: r.boss||'',
+    raid: r.raid||'',
+    slot: r.slot||'',
+  };
 }
 function rowToGearType(r) {
   return { id: r.id, db_id: r.id, name: r.name, n: r.price_normal, h: r.price_hero, e: r.price_epic, icon: r.icon_url||null, emoji: r.emoji||'🗡️', sort_order: r.sort_order||0 };
@@ -1802,6 +2329,14 @@ async function loadAllFromDB() {
     if (gRows.length > 0) {
       gearTypes = gRows.map(rowToGearType);
     }
+
+    // Load specific gear items (raid loot table)
+    const giRows = await db.getGearItems();
+    gearItems = giRows.map(r => ({
+      id: r.id, name: r.name, slot: r.slot,
+      boss: r.boss, raid: r.raid,
+      n: r.price_normal, h: r.price_hero, e: r.price_epic
+    }));
 
     hideLoadingOverlay();
     const dbDot = document.getElementById('db-status');
@@ -1902,6 +2437,54 @@ console.log('AT Guild DKP ready. Waiting for login...');
 </script>
 
 <!-- LOGIN OVERLAY -->
+<!-- GEAR ITEM MODAL -->
+<div class="mo" id="mo-gear-item"><div class="md" style="width:520px">
+  <div class="md-title" id="gim-title">添加装备</div>
+  <div class="mg2">
+    <div class="fg" style="grid-column:1/-1">
+      <label class="fl">装备名称 *</label>
+      <input class="fi" id="gim-name" placeholder="例：元首的战旗">
+    </div>
+    <div class="fg">
+      <label class="fl">部位 / 类型</label>
+      <input class="fi" id="gim-slot" placeholder="例：披风、武器·单手锤">
+    </div>
+    <div class="fg">
+      <label class="fl">副本</label>
+      <select class="fs" id="gim-raid" onchange="updateGimBossOptions()">
+        <option value="虚影尖塔">虚影尖塔</option>
+        <option value="梦境裂隙">梦境裂隙</option>
+        <option value="进军奎尔丹纳斯">进军奎尔丹纳斯</option>
+        <option value="自定义">自定义（坐骑/图纸/其他）</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="fl">Boss</label>
+      <select class="fs" id="gim-boss-sel" onchange="onGimBossChange(this)">
+        <option value="">选择Boss…</option>
+      </select>
+      <input class="fi" id="gim-boss-custom" placeholder="自定义Boss/来源" style="display:none;margin-top:6px">
+    </div>
+    <div class="stitle" style="grid-column:1/-1;font-size:10px;margin-bottom:4px">DKP 价格</div>
+    <div class="fg">
+      <label class="fl" style="color:#f4e000">勇士</label>
+      <input class="fi" type="number" id="gim-n" value="60">
+    </div>
+    <div class="fg">
+      <label class="fl" style="color:#e84040">英雄</label>
+      <input class="fi" type="number" id="gim-h" value="90">
+    </div>
+    <div class="fg">
+      <label class="fl" style="color:#a335ee">史诗</label>
+      <input class="fi" type="number" id="gim-e" value="140">
+    </div>
+  </div>
+  <div class="md-footer">
+    <button class="btn btn-outline" onclick="closeMo('mo-gear-item')">取消</button>
+    <button class="btn btn-gold" onclick="saveGearItem()">保存</button>
+  </div>
+</div></div>
+
 <div class="login-overlay" id="login-overlay">
   <!-- WoW Midnight cinematic background -->
   <iframe class="login-bg-video" src="https://www.youtube.com/embed/22Nf00VN0WM?autoplay=1&mute=1&loop=1&playlist=22Nf00VN0WM&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&start=5" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen style="pointer-events:none;transform:scale(1.1)"></iframe>
