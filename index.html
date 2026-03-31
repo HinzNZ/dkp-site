@@ -405,24 +405,45 @@ body.viewer-mode .admin-only{display:none!important}
   </div>
 </div></div>
 
-<div class="mo" id="mo-loot"><div class="md">
+<div class="mo" id="mo-loot"><div class="md" style="width:640px">
   <div class="md-title">🎁 分配装备</div>
-  <div class="fg" style="margin-bottom:12px">
-    <label class="fl">装备名称</label>
-    <div style="display:flex;gap:8px;align-items:center">
-      <input class="fi" id="l-item" placeholder="输入装备名称，或从下方选择" style="flex:1" oninput="filterLootItems(this.value)">
-      <select class="fs" id="l-qual" style="width:86px">
-        <option value="normal">英雄</option><option value="hero">勇士</option><option value="epic">史诗</option>
-      </select>
-    </div>
-    <div id="l-suggestions" style="display:none;background:var(--bg-card2);border:1px solid var(--border);border-radius:7px;margin-top:4px;max-height:140px;overflow-y:auto"></div>
+
+  <!-- Step 1: Pick gear type -->
+  <div id="loot-step1">
+    <div class="fl" style="margin-bottom:10px">选择装备类型</div>
+    <input class="fi" id="l-search" placeholder="搜索装备类型…" oninput="renderLootTypeGrid(this.value)" style="margin-bottom:10px">
+    <div id="l-type-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;max-height:260px;overflow-y:auto"></div>
   </div>
-  <div class="fg" style="margin-bottom:13px"><label class="fl">扣除DKP</label><input class="fi" type="number" id="l-dkp" value="50"></div>
-  <div class="fg" style="margin-bottom:8px"><label class="fl">选择获得装备的团员</label></div>
-  <div class="mpk" id="l-pk"></div>
+
+  <!-- Step 2: Pick quality + confirm item -->
+  <div id="loot-step2" style="display:none">
+    <button onclick="lootBackToStep1()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;font-family:inherit;padding:0;margin-bottom:14px;display:flex;align-items:center;gap:6px">← 重新选择</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:14px;background:var(--bg-card2);border:1px solid var(--border-hi);border-radius:10px">
+      <div id="l-selected-icon" style="width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;background:var(--bg-card);border:1px solid var(--border);flex-shrink:0"></div>
+      <div style="flex:1">
+        <div id="l-selected-name" style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px"></div>
+        <div style="font-size:11px;color:var(--muted)">选择品质后自动填入DKP</div>
+      </div>
+    </div>
+    <div class="fg" style="margin-bottom:14px">
+      <label class="fl">品质 / 难度</label>
+      <div style="display:flex;gap:8px">
+        <button class="loot-qual-btn on" data-qual="normal" onclick="selectLootQual('normal',this)" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(30,255,0,.4);background:rgba(30,255,0,.08);color:#1eff00;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">英雄</button>
+        <button class="loot-qual-btn" data-qual="hero" onclick="selectLootQual('hero',this)" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(0,112,221,.3);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">勇士</button>
+        <button class="loot-qual-btn" data-qual="epic" onclick="selectLootQual('epic',this)" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(163,53,238,.3);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">史诗</button>
+      </div>
+    </div>
+    <div class="fg" style="margin-bottom:14px">
+      <label class="fl">扣除DKP</label>
+      <input class="fi" type="number" id="l-dkp" value="50">
+    </div>
+    <div class="fg" style="margin-bottom:8px"><label class="fl">选择获得装备的团员</label></div>
+    <div class="mpk" id="l-pk"></div>
+  </div>
+
   <div class="md-footer">
     <button class="btn btn-outline" onclick="closeMo('mo-loot')">取消</button>
-    <button class="btn btn-red" onclick="confirmLoot()">确认扣分</button>
+    <button class="btn btn-red" id="l-confirm-btn" style="display:none" onclick="confirmLoot()">确认扣分</button>
   </div>
 </div></div>
 
@@ -806,21 +827,100 @@ function confirmDkp(){
   closeMo('mo-dkp');renderED(dkpEvtId);toast(`已为 ${tgts.length} 人加 ${amt} DKP ✨`,'ok');
 }
 
+let lootSelGearType = null;
+let lootSelQual = 'normal';
+
 function openLootMo(id){
-  lootEvtId=id;lootSel=null;
-  sv('l-item','');sv('l-dkp',50);
-  document.getElementById('l-suggestions').style.display='none';
+  lootEvtId=id; lootSel=null; lootSelGearType=null; lootSelQual='normal';
+  lootBackToStep1();
+  sv('l-search','');
+  renderLootTypeGrid('');
   const e=events.find(x=>x.id===id);
   const ms=(e?e.roster:[]).map(i=>members.find(m=>m.id===i)).filter(Boolean);
   document.getElementById('l-pk').innerHTML=ms.map(m=>`<div class="pcard" id="lp-${m.id}" onclick="selLoot(${m.id})"><div class="pc-n" style="color:${clsColor(m.cls)};font-weight:600">${m.char||m.wx}</div><div class="pc-d" style="color:${clsColor(m.cls)}66;font-size:10px">${m.cls} · ${m.dkp} DKP</div></div>`).join('');
   openMo('mo-loot');
 }
+
+function renderLootTypeGrid(q) {
+  const filtered = q
+    ? gearTypes.filter(g => g.name.toLowerCase().includes(q.toLowerCase()))
+    : gearTypes;
+  const qColor = {normal:'#1eff00', hero:'#0070dd', epic:'#a335ee'};
+  document.getElementById('l-type-grid').innerHTML = filtered.map(g => {
+    const iconHtml = g.icon
+      ? `<img src="${g.icon}" style="width:32px;height:32px;object-fit:cover;border-radius:6px">`
+      : `<span style="font-size:22px">${g.emoji||'🗡️'}</span>`;
+    return `<div onclick="selectLootType(${g.id})"
+      style="background:var(--bg-card2);border:1px solid var(--border);border-radius:9px;padding:12px 10px;cursor:pointer;text-align:center;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:6px"
+      onmouseover="this.style.borderColor='var(--gold)';this.style.background='rgba(200,168,75,.08)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg-card2)'">
+      ${iconHtml}
+      <div style="font-size:12px;font-weight:600;color:var(--text)">${g.name}</div>
+      <div style="font-size:10px;display:flex;gap:4px">
+        <span style="color:${qColor.normal}">${g.n}</span>
+        <span style="color:var(--muted)">/</span>
+        <span style="color:${qColor.hero}">${g.h}</span>
+        <span style="color:var(--muted)">/</span>
+        <span style="color:${qColor.epic}">${g.e}</span>
+      </div>
+    </div>`;
+  }).join('') || '<div style="color:var(--muted);padding:20px;text-align:center;grid-column:1/-1">暂无装备类型</div>';
+}
+
+function selectLootType(gearTypeId) {
+  const g = gearTypes.find(x => x.id === gearTypeId);
+  if (!g) return;
+  lootSelGearType = g;
+  document.getElementById('loot-step1').style.display = 'none';
+  document.getElementById('loot-step2').style.display = 'block';
+  document.getElementById('l-confirm-btn').style.display = '';
+  const iconEl = document.getElementById('l-selected-icon');
+  iconEl.innerHTML = g.icon
+    ? `<img src="${g.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`
+    : (g.emoji || '🗡️');
+  document.getElementById('l-selected-name').textContent = g.name;
+  selectLootQual('normal', document.querySelector('.loot-qual-btn[data-qual="normal"]'));
+}
+
+function lootBackToStep1() {
+  const s1=document.getElementById('loot-step1');
+  const s2=document.getElementById('loot-step2');
+  const cb=document.getElementById('l-confirm-btn');
+  if(s1) s1.style.display='';
+  if(s2) s2.style.display='none';
+  if(cb) cb.style.display='none';
+  lootSelGearType=null;
+}
+
+function selectLootQual(qual, btn) {
+  lootSelQual = qual;
+  const qColor   = {normal:'#1eff00', hero:'#0070dd', epic:'#a335ee'};
+  const qBg      = {normal:'rgba(30,255,0,.1)', hero:'rgba(0,112,221,.12)', epic:'rgba(163,53,238,.12)'};
+  const qBorder  = {normal:'rgba(30,255,0,.5)', hero:'rgba(0,112,221,.5)', epic:'rgba(163,53,238,.5)'};
+  const qBorderDim={normal:'rgba(30,255,0,.25)',hero:'rgba(0,112,221,.25)',epic:'rgba(163,53,238,.25)'};
+  document.querySelectorAll('.loot-qual-btn').forEach(b => {
+    const q = b.dataset.qual;
+    b.style.color = 'var(--muted)';
+    b.style.background = 'transparent';
+    b.style.borderColor = qBorderDim[q];
+  });
+  if (btn) {
+    btn.style.color = qColor[qual];
+    btn.style.background = qBg[qual];
+    btn.style.borderColor = qBorder[qual];
+  }
+  if (lootSelGearType) {
+    sv('l-dkp', {normal:lootSelGearType.n, hero:lootSelGearType.h, epic:lootSelGearType.e}[qual] || 0);
+  }
+}
 function selLoot(id){if(lootSel!==null)document.getElementById(`lp-${lootSel}`)?.classList.remove('on');lootSel=id;document.getElementById(`lp-${id}`)?.classList.add('on');}
 function confirmLoot(){
   if(!lootSel){toast('请选择团员','err');return;}
+  if(!lootSelGearType){toast('请选择装备类型','err');return;}
   const m=members.find(x=>x.id===lootSel);
-  const dkp=parseInt(gv('l-dkp'))||0,item=gv('l-item').trim(),q=gv('l-qual');
-  if(!item){toast('请填写装备名称','err');return;}
+  const dkp=parseInt(gv('l-dkp'))||0;
+  const item=lootSelGearType.name;
+  const q=lootSelQual;
   const e=events.find(x=>x.id===lootEvtId);
   m.dkp-=dkp;
   const llog={mid:lootSel,member_db_id:m.db_id||m.id,item,q,dkp,time:nowT()};
@@ -1100,17 +1200,10 @@ function removeFromRoster(evtId, memberId) {
 }
 
 
-function filterLootItems(q) {
-  const box = document.getElementById('l-suggestions');
-  if (!q) { box.style.display='none'; return; }
   const matches = wowItems.filter(i => i.toLowerCase().includes(q.toLowerCase()) || i.includes(q));
   if (!matches.length) { box.style.display='none'; return; }
   box.style.display = 'block';
   box.innerHTML = matches.map(i => `<div onclick="pickLootItem('${i}')" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);transition:.12s" onmouseover="this.style.background='rgba(201,168,76,.08)'" onmouseout="this.style.background=''">${i}</div>`).join('');
-}
-function pickLootItem(name) {
-  sv('l-item', name);
-  document.getElementById('l-suggestions').style.display='none';
 }
 
 
