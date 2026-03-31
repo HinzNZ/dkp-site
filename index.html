@@ -204,6 +204,16 @@ tr:hover td{background:rgba(201,168,76,.025)}
 .gtc-del{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;opacity:0;transition:.15s;line-height:1}
 .gear-type-card:hover .gtc-del{opacity:1}
 .gtc-del:hover{color:var(--red)}
+
+/* Light mode */
+body.light-mode{--bg:#e8e0d0;--bg-card:#f4ede0;--bg-card2:#ede5d5;--border:rgba(120,90,20,.2);--border-hi:rgba(120,90,20,.45);--text:#2a1e0a;--muted:#7a6850;--shadow:0 4px 24px rgba(0,0,0,.15)}
+body.light-mode .hdr{background:rgba(235,225,200,.97);box-shadow:0 1px 0 rgba(150,110,20,.2),0 2px 12px rgba(0,0,0,.1)}
+body.light-mode .fi,body.light-mode .fs{background:rgba(255,255,255,.7);border-color:rgba(120,90,20,.2);color:var(--text)}
+body.light-mode th{background:rgba(150,110,20,.08)}
+body.light-mode td{border-bottom-color:rgba(150,110,20,.1)}
+body.light-mode tr:hover td{background:rgba(150,110,20,.04)}
+body.light-mode .md{background:var(--bg-card)}
+body.light-mode .rcard,body.light-mode .pcard,body.light-mode .gc,.light-mode .tb-wrap{box-shadow:0 2px 8px rgba(0,0,0,.08)}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(201,168,76,.22);border-radius:3px}
@@ -216,8 +226,10 @@ tr:hover td{background:rgba(201,168,76,.025)}
 }
 
 /* ── LOGIN OVERLAY ── */
-.login-overlay{position:fixed;inset:0;background:rgba(6,8,14,.97);z-index:9000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
-.login-box{background:var(--bg-card);border:1px solid var(--border-hi);border-radius:16px;padding:40px 44px;width:360px;box-shadow:var(--shadow);text-align:center}
+.login-overlay{position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.login-overlay::before{content:'';position:absolute;inset:0;background:rgba(4,6,12,.82);z-index:1;backdrop-filter:blur(2px)}
+.login-bg-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;opacity:.7}
+.login-box{position:relative;z-index:2;background:rgba(10,12,20,.85);border:1px solid var(--border-hi);border-radius:16px;padding:40px 44px;width:360px;box-shadow:0 0 60px rgba(0,0,0,.8),0 0 120px rgba(74,130,224,.15);text-align:center;backdrop-filter:blur(20px)}
 .login-logo{font-family:'Cinzel',serif;font-size:16px;font-weight:900;color:var(--gold);letter-spacing:3px;margin-bottom:4px}
 .login-sub{font-size:11px;color:var(--muted);letter-spacing:2px;margin-bottom:32px}
 .login-tabs{display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:24px}
@@ -247,7 +259,9 @@ body.viewer-mode .admin-only{display:none!important}
     <button class="nb" onclick="showPg('members')" id="nav-members">👥 团员管理</button>
     <button class="nb" onclick="showPg('dkp')" id="nav-dkp">⭐ DKP排行</button>
     <button class="nb" onclick="showPg('gear')" id="nav-gear">🎁 装备管理</button>
+    <button class="nb" onclick="showPg('links')" id="nav-links">🔗 快速链接</button>
   </nav>
+  <button id="theme-btn" onclick="toggleTheme()" title="切换黑白模式" style="background:none;border:1px solid var(--border);color:var(--muted);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:.18s;margin-left:8px;flex-shrink:0">🌙</button>
   <div id="user-badge-wrap" style="margin-left:10px"></div>
 </div></div>
 
@@ -334,6 +348,67 @@ body.viewer-mode .admin-only{display:none!important}
       <div class="stitle" style="font-size:10px">近期分装备记录</div>
       <div id="gloot" style="max-height:480px;overflow-y:auto"></div>
     </div>
+  </div>
+</div>
+
+<!-- QUICK LINKS PAGE -->
+<div class="pg" id="pg-links">
+  <div class="stitle">快速链接</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:24px">
+    <div class="gc" style="cursor:pointer" onclick="openExternalLink('https://www.wowhead.com')" onmouseover="this.style.borderColor='var(--border-hi)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div style="width:40px;height:40px;border-radius:8px;background:rgba(255,100,0,.15);border:1px solid rgba(255,100,0,.3);display:flex;align-items:center;justify-content:center;font-size:20px">🗡️</div>
+        <div><div style="font-weight:700;color:var(--text)">Wowhead</div><div style="font-size:11px;color:var(--muted)">数据库 · 攻略 · 掉落查询</div></div>
+        <span style="margin-left:auto;color:var(--muted);font-size:12px">↗</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted)">查询装备、Boss掉落、职业攻略，魔兽世界最权威数据库</div>
+    </div>
+    <div class="gc" style="cursor:pointer" onclick="openExternalLink('https://cn.wowhead.com')" onmouseover="this.style.borderColor='var(--border-hi)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div style="width:40px;height:40px;border-radius:8px;background:rgba(255,100,0,.15);border:1px solid rgba(255,100,0,.3);display:flex;align-items:center;justify-content:center;font-size:20px">🀄</div>
+        <div><div style="font-weight:700;color:var(--text)">Wowhead 中文</div><div style="font-size:11px;color:var(--muted)">中文版数据库</div></div>
+        <span style="margin-left:auto;color:var(--muted);font-size:12px">↗</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted)">Wowhead官方中文站，装备、任务、副本全中文查询</div>
+    </div>
+    <div class="gc" style="cursor:pointer" onclick="openExternalLink('https://www.warcraftlogs.com')" onmouseover="this.style.borderColor='var(--border-hi)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div style="width:40px;height:40px;border-radius:8px;background:rgba(255,165,0,.15);border:1px solid rgba(255,165,0,.3);display:flex;align-items:center;justify-content:center;font-size:20px">📊</div>
+        <div><div style="font-weight:700;color:var(--text)">Warcraft Logs</div><div style="font-size:11px;color:var(--muted)">团本战斗记录 · 输出解析</div></div>
+        <span style="margin-left:auto;color:var(--muted);font-size:12px">↗</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted)">上传并分析团本战斗日志，查看输出/治疗/坦克数据排行</div>
+    </div>
+    <div class="gc" style="cursor:pointer" onclick="openExternalLink('https://raider.io')" onmouseover="this.style.borderColor='var(--border-hi)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div style="width:40px;height:40px;border-radius:8px;background:rgba(0,180,255,.15);border:1px solid rgba(0,180,255,.3);display:flex;align-items:center;justify-content:center;font-size:20px">⚡</div>
+        <div><div style="font-weight:700;color:var(--text)">Raider.IO</div><div style="font-size:11px;color:var(--muted)">M+ 评分 · 角色查询</div></div>
+        <span style="margin-left:auto;color:var(--muted);font-size:12px">↗</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted)">查询角色大秘境评分、本周进度、最佳路线推荐</div>
+    </div>
+    <div class="gc" style="cursor:pointer" onclick="openExternalLink('https://www.icy-veins.com/wow/')" onmouseover="this.style.borderColor='var(--border-hi)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div style="width:40px;height:40px;border-radius:8px;background:rgba(100,200,255,.15);border:1px solid rgba(100,200,255,.3);display:flex;align-items:center;justify-content:center;font-size:20px">❄️</div>
+        <div><div style="font-weight:700;color:var(--text)">Icy Veins</div><div style="font-size:11px;color:var(--muted)">职业攻略 · 天赋推荐</div></div>
+        <span style="margin-left:auto;color:var(--muted);font-size:12px">↗</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted)">各职业最新天赋加点、装备推荐、团本打法攻略</div>
+    </div>
+    <div class="gc" style="cursor:pointer" onclick="openExternalLink('https://www.wowprogress.com')" onmouseover="this.style.borderColor='var(--border-hi)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div style="width:40px;height:40px;border-radius:8px;background:rgba(200,168,75,.15);border:1px solid rgba(200,168,75,.3);display:flex;align-items:center;justify-content:center;font-size:20px">🏆</div>
+        <div><div style="font-weight:700;color:var(--text)">WoWProgress</div><div style="font-size:11px;color:var(--muted)">公会排行 · 世界进度</div></div>
+        <span style="margin-left:auto;color:var(--muted);font-size:12px">↗</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted)">全球公会团本进度排行，追踪世界首杀竞赛</div>
+    </div>
+  </div>
+
+  <!-- WCL Embed -->
+  <div class="stitle" style="font-size:11px">Warcraft Logs — 排行榜</div>
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;height:600px">
+    <iframe src="https://www.warcraftlogs.com" style="width:100%;height:100%;border:none" title="Warcraft Logs"></iframe>
   </div>
 </div>
 
@@ -687,9 +762,10 @@ function backToCal(){
 function renderED(id){
   const e=events.find(x=>x.id===id);if(!e)return;
   const ms=e.roster.map(i=>members.find(m=>m.id===i)).filter(Boolean);
-  const tanks=ms.filter(m=>['T','团长'].includes(m.role));
+  const mgmt=ms.filter(m=>['会长','副会长','团长'].includes(m.role));
+  const tanks=ms.filter(m=>m.role==='T');
   const heals=ms.filter(m=>m.role==='N');
-  const dps=ms.filter(m=>!['T','N','团长'].includes(m.role));
+  const dps=ms.filter(m=>!['T','N','会长','副会长','团长'].includes(m.role));
   const rc=m=>`<div class="rcard rt-${m.role==='T'||m.role==='团长'?'t':m.role==='N'?'n':'d'}" style="padding-bottom:32px;border-left:3px solid ${clsColor(m.cls)}">
     <div class="rc-name" style="color:${clsColor(m.cls)};text-shadow:0 0 10px ${clsColor(m.cls)}30">${m.char||m.wx}</div><div class="rc-sub">${clsTag(m.cls)} · ${rl(m.role)}</div>
     <div class="rc-dkp">${m.dkp}</div>
@@ -726,6 +802,7 @@ function renderED(id){
         <button class="btn btn-green btn-sm admin-only" onclick="openDkpMo(${id})">⚡ 一键加DKP</button>
         <button class="btn btn-blue btn-sm admin-only" onclick="openLootMo(${id})">🎁 分配装备</button>
         <button class="btn btn-outline btn-sm admin-only" onclick="toggleStatus(${id})">${e.status==='completed'?'↩ 重新开放':'✓ 标记完成'}</button>
+        <button class="btn btn-red btn-sm admin-only" onclick="deleteEvent(${id})">🗑 删除活动</button>
       </div>
     </div>
     <div class="ed-stats">
@@ -743,7 +820,7 @@ function renderED(id){
     <div style="margin-bottom:14px">
       <button class="btn btn-gold btn-sm admin-only" onclick="openAddRosterMo(${id})">＋ 添加团员到本次活动</button>
     </div>
-    ${sect('坦克',tanks)}${sect('治疗',heals)}${sect('输出',dps)}
+    ${sect('公会管理',mgmt)}${sect('坦克',tanks)}${sect('治疗',heals)}${sect('输出',dps)}
     ${ms.length===0?'<div style=\"color:var(--muted);padding:16px;text-align:center\">暂无出席团员</div>':''}
   </div>
   <div class="tpanel" id="tp-dkplog">${dRows||'<div style="color:var(--muted);padding:16px;text-align:center">暂无记录</div>'}</div>
@@ -760,6 +837,20 @@ function toggleStatus(id){
   e.status=e.status==='completed'?'planned':'completed';
   if(e.db_id) db.updateEventStatus(e.db_id, e.status);
   renderED(id);renderAll();toast(e.status==='completed'?'已标记完成':'已重新开放','ok');
+}
+async function deleteEvent(id){
+  const e=events.find(x=>x.id===id);
+  if(!e)return;
+  if(!confirm(`确定删除活动「${e.name}」？\n此操作不可恢复，DKP记录和装备记录也会一并删除。`))return;
+  if(e.db_id){
+    await sbFetch(`dkp_logs?event_id=eq.${e.db_id}`, 'DELETE', null, 'return=minimal');
+    await sbFetch(`loot_logs?event_id=eq.${e.db_id}`, 'DELETE', null, 'return=minimal');
+    await sbFetch(`events?id=eq.${e.db_id}`, 'DELETE', null, 'return=minimal');
+  }
+  events=events.filter(x=>x.id!==id);
+  backToCal();
+  renderAll();
+  toast(`活动「${e.name}」已删除`,'ok');
 }
 
 // ══ MODALS ══
@@ -979,11 +1070,10 @@ function filterR(r){rF=r;renderMembers();}
 // ══ DKP ══
 function renderDkp(){
   const s=[...members].sort((a,b)=>b.dkp-a.dkp);
-  const avg=Math.round(s.reduce((a,m)=>a+m.dkp,0)/s.length);
   document.getElementById('dkp-stats').innerHTML=`
     <div class="sc"><div class="sc-l">团员总数</div><div class="sc-v">${members.length}</div><div class="sc-s">活跃 ${members.filter(m=>m.st==='在').length} 人</div></div>
-    <div class="sc"><div class="sc-l">平均DKP</div><div class="sc-v">${avg}</div></div>
     <div class="sc"><div class="sc-l">最高DKP</div><div class="sc-v">${s[0]?.dkp||0}</div><div class="sc-s">${s[0]?.char||s[0]?.wx||''}</div></div>
+    <div class="sc"><div class="sc-l">最低DKP</div><div class="sc-v" style="color:${s[s.length-1]?.dkp<0?'var(--red)':'var(--gold)'}">${s[s.length-1]?.dkp||0}</div><div class="sc-s">${s[s.length-1]?.char||s[s.length-1]?.wx||''}</div></div>
     <div class="sc"><div class="sc-l">活动次数</div><div class="sc-v">${events.length}</div></div>`;
   document.getElementById('dkp-tbody').innerHTML=s.map((m,i)=>`<tr>
     <td style="font-family:'Cinzel',serif;color:${i<3?'var(--gold)':'var(--muted)'}">${i+1}</td>
@@ -1107,12 +1197,29 @@ function renderGloot(){
 function showPg(p){
   document.querySelectorAll('.pg').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(x=>x.classList.remove('on'));
-  document.getElementById('pg-'+p).classList.add('on');
-  document.getElementById('nav-'+p).classList.add('on');
+  document.getElementById('pg-'+p)?.classList.add('on');
+  document.getElementById('nav-'+p)?.classList.add('on');
   if(p==='members')renderMembers();
   if(p==='dkp')renderDkp();
   if(p==='gear'){renderGear();renderGloot();}
 }
+function toggleTheme(){
+  document.body.classList.toggle('light-mode');
+  const btn=document.getElementById('theme-btn');
+  const isLight=document.body.classList.contains('light-mode');
+  if(btn)btn.textContent=isLight?'☀️':'🌙';
+  try{localStorage.setItem('at-theme',isLight?'light':'dark');}catch(e){}
+}
+function openExternalLink(url){
+  window.open(url,'_blank','noopener,noreferrer');
+}
+// Restore saved theme
+try{
+  if(localStorage.getItem('at-theme')==='light'){
+    document.body.classList.add('light-mode');
+    setTimeout(()=>{const b=document.getElementById('theme-btn');if(b)b.textContent='☀️';},50);
+  }
+}catch(e){}
 
 // ══ TOAST ══
 function toast(msg,type){
@@ -1528,6 +1635,8 @@ loadAllFromDB();
 
 <!-- LOGIN OVERLAY -->
 <div class="login-overlay" id="login-overlay">
+  <!-- WoW Midnight cinematic background -->
+  <iframe class="login-bg-video" src="https://www.youtube.com/embed/22Nf00VN0WM?autoplay=1&mute=1&loop=1&playlist=22Nf00VN0WM&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&start=5" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen style="pointer-events:none;transform:scale(1.1)"></iframe>
   <div class="login-box">
     <div class="login-logo">AUCKLAND TRANSPORT</div>
     <div class="login-sub">公会DKP管理系统</div>
