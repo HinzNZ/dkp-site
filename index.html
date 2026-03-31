@@ -433,7 +433,7 @@ body.viewer-mode .admin-only{display:none!important}
     <div class="fg"><label class="fl">战网ID</label><input class="fi" id="mm-bn" placeholder="BattleTag#1234"></div>
     <div class="fg"><label class="fl">角色名</label><input class="fi" id="mm-char" placeholder="游戏角色名"></div>
     <div class="fg"><label class="fl">职业</label>
-      <select class="fs" id="mm-cls"><option>法师</option><option>猎人</option><option>术士</option><option>战士</option><option>骑士</option><option>DK</option><option>DH</option><option>德鲁伊</option><option>萨满</option><option>僧侣</option><option>盗贼</option><option>牧师</option><option>唤灵师</option></select>
+      <select class="fs" id="mm-cls" onchange="updateClsColor(this)"><option>法师</option><option>猎人</option><option>术士</option><option>战士</option><option>圣骑士</option><option>死亡骑士</option><option>恶魔猎手</option><option>德鲁伊</option><option>萨满</option><option>武僧</option><option>盗贼</option><option>牧师</option><option>唤魔师</option></select>
     </div>
     <div class="fg"><label class="fl">职责</label>
       <select class="fs" id="mm-role"><option value="T">坦克</option><option value="N">治疗</option><option value="DPS">输出</option><option value="会长">会长</option><option value="副会长">副会长</option><option value="团长">团长</option></select>
@@ -496,9 +496,9 @@ let members=[
   {id:1,wx:'诺仔',bn:'诺仔',char:'诺仔',cls:'法师',role:'团长',st:'在',dkp:493,note:''},
   {id:2,wx:'人匠',bn:'五娘',char:'五娘',cls:'武僧',role:'T',st:'请假',dkp:0,note:'3月31日回新西兰'},
   {id:3,wx:'Junshy',bn:'junshy',char:'从没扛住',cls:'战士',role:'T',st:'在',dkp:448,note:''},
-  {id:4,wx:'Wilson Yao',bn:'老狗/Gshadow',char:'Gshadow',cls:'骑士',role:'副会长',st:'在',dkp:408,note:''},
-  {id:5,wx:'Kion Zhang',bn:'月亮/Kion/Howl',char:'优衣库',cls:'骑士',role:'N',st:'在',dkp:493,note:''},
-  {id:6,wx:'小骆驼',bn:'小骆驼',char:'反补世界树',cls:'僧侣',role:'N',st:'在',dkp:250,note:''},
+  {id:4,wx:'Wilson Yao',bn:'老狗/Gshadow',char:'Gshadow',cls:'圣骑士',role:'副会长',st:'在',dkp:408,note:''},
+  {id:5,wx:'Kion Zhang',bn:'月亮/Kion/Howl',char:'优衣库',cls:'圣骑士',role:'N',st:'在',dkp:493,note:''},
+  {id:6,wx:'小骆驼',bn:'小骆驼',char:'反补世界树',cls:'武僧',role:'N',st:'在',dkp:250,note:''},
   {id:7,wx:'大灰兔子',bn:'大灰兔子',char:'大灰兔子',cls:'牧师',role:'N',st:'在',dkp:421,note:''},
   {id:8,wx:'美女姐姐是治疗',bn:'美女姐姐',char:'美女姐姐',cls:'牧师',role:'N',st:'在',dkp:388,note:''},
   {id:9,wx:'冒险者samblahblah',bn:'冒险者',char:'Samblahblah',cls:'德鲁伊',role:'N',st:'在',dkp:354,note:'替补'},
@@ -511,24 +511,24 @@ let members=[
   {id:16,wx:'再见晚星',bn:'再见晚星',char:'王主任',cls:'术士',role:'DPS',st:'在',dkp:398,note:''},
   {id:17,wx:'蔡星炫maaaario',bn:'马小二',char:'烧死那只狐狸',cls:'术士',role:'DPS',st:'在',dkp:282,note:''},
   {id:18,wx:'Kino48',bn:'Kino',char:'',cls:'术士',role:'DPS',st:'缺席',dkp:0,note:''},
-  {id:19,wx:'Janego',bn:'来都来了#51574',char:'花生花',cls:'唤灵师',role:'DPS',st:'在',dkp:493,note:''},
-  {id:20,wx:'王浩',bn:'文钰',char:'钰钰文文',cls:'唤灵师',role:'DPS',st:'在',dkp:444,note:''},
+  {id:19,wx:'Janego',bn:'来都来了#51574',char:'花生花',cls:'唤魔师',role:'DPS',st:'在',dkp:493,note:''},
+  {id:20,wx:'王浩',bn:'文钰',char:'钰钰文文',cls:'唤魔师',role:'DPS',st:'在',dkp:444,note:''},
   {id:21,wx:'SRV',bn:'blues',char:'捕鹿司',cls:'猎人',role:'DPS',st:'在',dkp:457,note:''},
   {id:22,wx:'晴天晒个太阳',bn:'晴天',char:'晴天不吃糖',cls:'猎人',role:'DPS',st:'在',dkp:493,note:''},
   {id:23,wx:'x',bn:'塔姆',char:'阿姨给点钱',cls:'猎人',role:'DPS',st:'在',dkp:439,note:''},
   {id:24,wx:'紫叶如焰',bn:'紫叶如焰',char:'落叶满长安',cls:'德鲁伊',role:'DPS',st:'在',dkp:439,note:''},
   {id:25,wx:'Luckymax',bn:'LUCKYMAXY#5516',char:'妖王狐',cls:'萨满',role:'会长',st:'在',dkp:493,note:''},
-  {id:26,wx:'No.',bn:'咩咩',char:'一只小羊咩咩',cls:'DK',role:'DPS',st:'在',dkp:493,note:''},
-  {id:27,wx:'韩韩',bn:'皮卡皮#51404',char:'阿兰克斯',cls:'DK',role:'DPS',st:'在',dkp:399,note:''},
-  {id:28,wx:'Evan_Yi',bn:'Evan_Yi',char:'南希',cls:'DK',role:'DPS',st:'在',dkp:439,note:''},
-  {id:29,wx:'Sunny',bn:'Sunny',char:'狮子的咆哮',cls:'DK',role:'DPS',st:'在',dkp:457,note:''},
+  {id:26,wx:'No.',bn:'咩咩',char:'一只小羊咩咩',cls:'死亡骑士',role:'DPS',st:'在',dkp:493,note:''},
+  {id:27,wx:'韩韩',bn:'皮卡皮#51404',char:'阿兰克斯',cls:'死亡骑士',role:'DPS',st:'在',dkp:399,note:''},
+  {id:28,wx:'Evan_Yi',bn:'Evan_Yi',char:'南希',cls:'死亡骑士',role:'DPS',st:'在',dkp:439,note:''},
+  {id:29,wx:'Sunny',bn:'Sunny',char:'狮子的咆哮',cls:'死亡骑士',role:'DPS',st:'在',dkp:457,note:''},
   {id:30,wx:'Jason Tan',bn:'大福星',char:'右火',cls:'战士',role:'DPS',st:'在',dkp:444,note:''},
-  {id:31,wx:'Terry',bn:'Soo',char:'Dolphins',cls:'DH',role:'DPS',st:'在',dkp:216,note:'长期请假'},
+  {id:31,wx:'Terry',bn:'Soo',char:'Dolphins',cls:'恶魔猎手',role:'DPS',st:'在',dkp:216,note:'长期请假'},
   {id:32,wx:'艾蓝',bn:'艾蓝#51669麋鹿',char:'咸恩静',cls:'盗贼',role:'DPS',st:'在',dkp:367,note:''},
-  {id:33,wx:'米修',bn:'米修',char:'尤其',cls:'DH',role:'DPS',st:'在',dkp:250,note:''},
-  {id:34,wx:'幽',bn:'GMYIIP#5148',char:'幽',cls:'DH',role:'DPS',st:'在',dkp:493,note:''},
-  {id:35,wx:'三哥带你飞',bn:'三哥带你飞#5314',char:'Aemeath',cls:'DH',role:'DPS',st:'在',dkp:313,note:''},
-  {id:36,wx:'张兆轩',bn:'HINZ',char:'Hinz',cls:'骑士',role:'DPS',st:'在',dkp:457,note:''},
+  {id:33,wx:'米修',bn:'米修',char:'尤其',cls:'恶魔猎手',role:'DPS',st:'在',dkp:250,note:''},
+  {id:34,wx:'幽',bn:'GMYIIP#5148',char:'幽',cls:'恶魔猎手',role:'DPS',st:'在',dkp:493,note:''},
+  {id:35,wx:'三哥带你飞',bn:'三哥带你飞#5314',char:'Aemeath',cls:'恶魔猎手',role:'DPS',st:'在',dkp:313,note:''},
+  {id:36,wx:'张兆轩',bn:'HINZ',char:'Hinz',cls:'圣骑士',role:'DPS',st:'在',dkp:457,note:''},
   {id:37,wx:'见血封喉',bn:'机械之忍#5559',char:'见血封喉',cls:'盗贼',role:'DPS',st:'在',dkp:367,note:''},
   {id:38,wx:'费雷德',bn:'费雷德#51928',char:'美食家',cls:'战士',role:'DPS',st:'在',dkp:156,note:'替补'},
   {id:39,wx:'时光飞逝',bn:'KKY',char:'没蓝了',cls:'法师',role:'DPS',st:'在',dkp:66,note:'替补'},
@@ -669,8 +669,8 @@ function renderED(id){
   const tanks=ms.filter(m=>['T','团长'].includes(m.role));
   const heals=ms.filter(m=>m.role==='N');
   const dps=ms.filter(m=>!['T','N','团长'].includes(m.role));
-  const rc=m=>`<div class="rcard rt-${m.role==='T'||m.role==='团长'?'t':m.role==='N'?'n':'d'}" style="padding-bottom:32px">
-    <div class="rc-name">${m.char||m.wx}</div><div class="rc-sub">${m.cls} · ${rl(m.role)}</div>
+  const rc=m=>`<div class="rcard rt-${m.role==='T'||m.role==='团长'?'t':m.role==='N'?'n':'d'}" style="padding-bottom:32px;border-left:3px solid ${clsColor(m.cls)}">
+    <div class="rc-name" style="color:${clsColor(m.cls)};text-shadow:0 0 10px ${clsColor(m.cls)}30">${m.char||m.wx}</div><div class="rc-sub">${clsTag(m.cls)} · ${rl(m.role)}</div>
     <div class="rc-dkp">${m.dkp}</div>
     <button onclick="removeFromRoster(${id},${m.id})" class="admin-only" style="position:absolute;bottom:8px;right:8px;background:rgba(208,80,80,.15);border:1px solid rgba(208,80,80,.35);color:var(--red);font-size:10px;padding:2px 8px;border-radius:5px;cursor:pointer;font-family:inherit">移除</button>
   </div>`;
@@ -681,11 +681,12 @@ function renderED(id){
       who='<span style="color:var(--muted);font-size:11px">全体 ('+e.roster.length+'人)</span>';
     } else {
       const names=(l.members||[]).map(mid=>{const mm=members.find(x=>x.id===mid);return mm?mm.char||mm.wx:'?';});
-      who='<span style="color:var(--muted);font-size:11px">'+names.join('、')+'</span>';
+      const coloredNames=(l.members||[]).map(mid=>{const mm=members.find(x=>x.id===mid);return mm?`<span style="color:${clsColor(mm.cls)}">${mm.char||mm.wx}</span>`:'?';});
+      who='<span style="font-size:11px">'+coloredNames.join('<span style="color:var(--muted)">、</span>')+'</span>';
     }
     return`<div class="lrow"><span class="lt">${l.time}</span><span class="lw" style="color:var(--green);min-width:60px">+${l.amount}</span><span class="li">${l.type}${l.note?' · '+l.note:''}</span><span class="la" style="text-align:right;min-width:120px">${who}</span></div>`;
   }).join('');
-  const lRows=e.lootLog.map(l=>{const m=members.find(x=>x.id===l.mid);return`<div class="lrow"><span class="lt">${l.time}</span><span class="lw">${m?m.char||m.wx:'?'}</span><span class="li q-${l.q}">${l.item}</span><span class="la" style="color:var(--red)">-${l.dkp}</span></div>`;}).join('');
+  const lRows=e.lootLog.map(l=>{const m=members.find(x=>x.id===l.mid);return`<div class="lrow"><span class="lt">${l.time}</span><span class="lw" style="color:${m?clsColor(m.cls):'var(--muted)'}">${m?m.char||m.wx:'?'}</span><span class="li q-${l.q}">${l.item}</span><span class="la" style="color:var(--red)">-${l.dkp}</span></div>`;}).join('');
   const totDkp=e.dkpLog.reduce((a,l)=>a+l.amount,0);
   const totLoot=e.lootLog.reduce((a,l)=>a+l.dkp,0);
   document.getElementById('ed-inner').innerHTML=`
@@ -788,7 +789,7 @@ function openDkpMo(id){
   document.querySelectorAll('#mo-dkp .pb').forEach(b=>b.classList.remove('on'));
   const e=events.find(x=>x.id===id);
   const ms=(e?e.roster:[]).map(i=>members.find(m=>m.id===i)).filter(Boolean);
-  document.getElementById('dkp-pk').innerHTML=ms.map(m=>`<div class="pcard" id="dp-${m.id}" onclick="togDkp(${m.id})"><div class="pc-n">${m.char||m.wx}</div><div class="pc-d">${m.dkp} DKP</div></div>`).join('');
+  document.getElementById('dkp-pk').innerHTML=ms.map(m=>`<div class="pcard" id="dp-${m.id}" onclick="togDkp(${m.id})"><div class="pc-n" style="color:${clsColor(m.cls)};font-weight:600">${m.char||m.wx}</div><div class="pc-d" style="color:${clsColor(m.cls)}66;font-size:10px">${m.cls} · ${m.dkp} DKP</div></div>`).join('');
   openMo('mo-dkp');
 }
 function pickPhase(name,amt,el){document.querySelectorAll('#mo-dkp .pbs .pb').forEach(b=>b.classList.remove('on'));el.classList.add('on');sv('dkp-amt',amt);sv('dkp-note',name);}
@@ -811,7 +812,7 @@ function openLootMo(id){
   document.getElementById('l-suggestions').style.display='none';
   const e=events.find(x=>x.id===id);
   const ms=(e?e.roster:[]).map(i=>members.find(m=>m.id===i)).filter(Boolean);
-  document.getElementById('l-pk').innerHTML=ms.map(m=>`<div class="pcard" id="lp-${m.id}" onclick="selLoot(${m.id})"><div class="pc-n">${m.char||m.wx}</div><div class="pc-d">${m.dkp} DKP</div></div>`).join('');
+  document.getElementById('l-pk').innerHTML=ms.map(m=>`<div class="pcard" id="lp-${m.id}" onclick="selLoot(${m.id})"><div class="pc-n" style="color:${clsColor(m.cls)};font-weight:600">${m.char||m.wx}</div><div class="pc-d" style="color:${clsColor(m.cls)}66;font-size:10px">${m.cls} · ${m.dkp} DKP</div></div>`).join('');
   openMo('mo-loot');
 }
 function selLoot(id){if(lootSel!==null)document.getElementById(`lp-${lootSel}`)?.classList.remove('on');lootSel=id;document.getElementById(`lp-${id}`)?.classList.add('on');}
@@ -838,6 +839,7 @@ function openMemMo(id){
     const m=members.find(x=>x.id===id);
     document.getElementById('mm-t').textContent='编辑团员';
     sv('mm-wx',m.wx);sv('mm-bn',m.bn);sv('mm-char',m.char);sv('mm-cls',m.cls);sv('mm-role',m.role);sv('mm-st',m.st);sv('mm-dkp',m.dkp);sv('mm-note',m.note);
+    setTimeout(()=>{const s=document.getElementById('mm-cls');if(s)updateClsColor(s);},10);
   }else{document.getElementById('mm-t').textContent='添加团员';['mm-wx','mm-bn','mm-char','mm-note'].forEach(i=>sv(i,''));sv('mm-dkp',0);}
   openMo('mo-mem');
 }
@@ -863,7 +865,7 @@ function renderMembers(){
   }).map((m,i)=>`<tr>
     <td style="color:var(--muted)">${i+1}</td><td>${m.wx}</td>
     <td style="color:var(--muted);font-size:12px">${m.bn||'—'}</td>
-    <td><strong>${m.char||'—'}</strong></td><td>${m.cls}</td>
+    <td>${charTag(m.char||'—', m.cls)}</td><td>${clsTag(m.cls)}</td>
     <td><span class="rtag rt-${m.role==='T'?'t2':m.role==='N'?'n2':'d2'}">${rl(m.role)}</span></td>
     <td><span class="badge ${m.st==='在'?'b-green':m.st==='请假'?'b-gold':'b-red'}">${m.st}</span></td>
     <td class="${m.dkp<0?'dv-':'dv'}">${m.dkp}</td>
@@ -885,7 +887,7 @@ function renderDkp(){
     <div class="sc"><div class="sc-l">活动次数</div><div class="sc-v">${events.length}</div></div>`;
   document.getElementById('dkp-tbody').innerHTML=s.map((m,i)=>`<tr>
     <td style="font-family:'Cinzel',serif;color:${i<3?'var(--gold)':'var(--muted)'}">${i+1}</td>
-    <td><strong>${m.char||m.wx}</strong></td><td>${m.cls}</td>
+    <td>${charTag(m.char||m.wx, m.cls)}</td><td>${clsTag(m.cls)}</td>
     <td><span class="rtag rt-${m.role==='T'?'t2':m.role==='N'?'n2':'d2'}">${rl(m.role)}</span></td>
     <td class="${m.dkp<0?'dv-':'dv'}" style="font-size:15px">${m.dkp}</td>
     <td><span class="badge ${m.st==='在'?'b-green':m.st==='请假'?'b-gold':'b-red'}">${m.st}</span></td>
@@ -997,7 +999,7 @@ function renderGloot(){
   all.sort((a,b)=>b.time.localeCompare(a.time));
   document.getElementById('gloot').innerHTML=all.slice(0,30).map(l=>{
     const m=members.find(x=>x.id===l.mid);
-    return`<div class="lrow" style="margin-bottom:4px"><span class="lw">${m?m.char||m.wx:'?'}</span><span class="li q-${l.q}">${l.item}</span><span class="la" style="color:var(--red)">-${l.dkp}</span></div>`;
+    return`<div class="lrow" style="margin-bottom:4px"><span class="lw" style="color:${m?clsColor(m.cls):'var(--muted)'}">${m?m.char||m.wx:'?'}</span><span class="li q-${l.q}">${l.item}</span><span class="la" style="color:var(--red)">-${l.dkp}</span></div>`;
   }).join('')||'<div style="color:var(--muted);padding:12px;text-align:center">暂无记录</div>';
 }
 
@@ -1058,8 +1060,8 @@ function renderAddRosterPicker(q) {
       style="${inRoster ? 'opacity:.4;cursor:default;' : ''}"
       onclick="${inRoster ? '' : 'toggleAddRoster(' + m.id + ')'}"
       id="ar-${m.id}">
-      <div class="pc-n">${m.char || m.wx}</div>
-      <div class="pc-d" style="color:${inRoster ? 'var(--green)' : 'var(--muted)'}">${inRoster ? '已在活动中' : m.dkp + ' DKP'}</div>
+      <div class="pc-n" style="color:${clsColor(m.cls)};font-weight:600">${m.char || m.wx}</div>
+      <div class="pc-d" style="color:${inRoster ? 'var(--green)' : clsColor(m.cls)+'99'};font-size:10px">${m.cls}${inRoster ? ' · 已在活动中' : ' · ' + m.dkp + ' DKP'}</div>
     </div>`;
   }).join('');
 }
@@ -1400,6 +1402,40 @@ function hideLoadingOverlay() {
   if (el) el.remove();
 }
 // ════════════════════════════════════════════════════════
+
+// ══ WoW Class Colors ══
+const CLS_COLOR = {
+  '战士':    '#C79C6E',  // Warrior
+  '圣骑士':  '#F58CBA',  // Paladin
+  '猎人':    '#ABD473',  // Hunter
+  '盗贼':    '#FFF569',  // Rogue
+  '牧师':    '#FFFFFF',  // Priest
+  '死亡骑士':'#C41E3A',  // Death Knight
+  '萨满':    '#0070DE',  // Shaman
+  '法师':    '#69CCF0',  // Mage
+  '术士':    '#9482C9',  // Warlock
+  '武僧':    '#00FF98',  // Monk
+  '德鲁伊':  '#FF7D0A',  // Druid
+  '恶魔猎手':'#A330C9',  // Demon Hunter
+  '唤魔师':  '#33937F',  // Evoker
+};
+function clsColor(cls) {
+  return CLS_COLOR[cls] || 'var(--text)';
+}
+function clsTag(cls) {
+  const color = clsColor(cls);
+  return `<span style="color:${color};font-weight:600">${cls}</span>`;
+}
+function charTag(name, cls) {
+  const color = clsColor(cls);
+  return `<span style="color:${color};font-weight:700;text-shadow:0 0 8px ${color}40">${name}</span>`;
+}
+
+
+function updateClsColor(sel) {
+  sel.style.color = clsColor(sel.value);
+  sel.style.fontWeight = '700';
+}
 
 loadAllFromDB();
 </script>
