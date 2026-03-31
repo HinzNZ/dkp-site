@@ -149,7 +149,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .lw{font-weight:600;min-width:85px}
 .li{flex:1}
 .la{font-weight:700;min-width:55px;text-align:right}
-.q-epic{color:#a335ee}.q-hero{color:#0070dd}.q-normal{color:#1eff00}
+.q-epic{color:#a335ee}.q-hero{color:#e84040!important}.q-normal{color:#f4e000!important}
 
 /* ── MEMBERS / DKP ── */
 .tb-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
@@ -654,8 +654,8 @@ body.viewer-mode .admin-only{display:none!important}
     <div class="fg" style="margin-bottom:14px">
       <label class="fl">品质 / 难度</label>
       <div style="display:flex;gap:8px">
-        <button class="loot-qual-btn on" data-qual="normal" onclick="selectLootQual('normal',this)" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(30,255,0,.4);background:rgba(30,255,0,.08);color:#1eff00;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">英雄</button>
-        <button class="loot-qual-btn" data-qual="hero" onclick="selectLootQual('hero',this)" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(0,112,221,.3);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">勇士</button>
+        <button class="loot-qual-btn on" data-qual="normal" onclick="selectLootQual('normal',this)" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(244,224,0,.5);background:rgba(244,224,0,.1);color:#f4e000;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">勇士</button>
+        <button class="loot-qual-btn" data-qual="hero" onclick="selectLootQual('hero',this)" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(232,64,64,.3);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">英雄</button>
         <button class="loot-qual-btn" data-qual="epic" onclick="selectLootQual('epic',this)" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(163,53,238,.3);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:.15s">史诗</button>
       </div>
     </div>
@@ -725,8 +725,8 @@ body.viewer-mode .admin-only{display:none!important}
   <input type="file" id="gt-icon-upload" accept="image/*" style="display:none" onchange="previewGTIcon(this)">
   <div class="stitle" style="font-size:10px;margin-bottom:10px">DKP 默认价格</div>
   <div class="mg2" style="grid-template-columns:1fr 1fr 1fr">
-    <div class="fg"><label class="fl" style="color:var(--green)">英雄</label><input class="fi" type="number" id="gt-n" value="60"></div>
-    <div class="fg"><label class="fl" style="color:#0070dd">勇士</label><input class="fi" type="number" id="gt-h" value="90"></div>
+    <div class="fg"><label class="fl" style="color:#f4e000">勇士</label><input class="fi" type="number" id="gt-n" value="60"></div>
+    <div class="fg"><label class="fl" style="color:#e84040">英雄</label><input class="fi" type="number" id="gt-h" value="90"></div>
     <div class="fg"><label class="fl" style="color:#a335ee">史诗</label><input class="fi" type="number" id="gt-e" value="150"></div>
   </div>
   <div class="md-footer">
@@ -1087,11 +1087,14 @@ function renderLootTypeGrid(q) {
   const filtered = q
     ? gearTypes.filter(g => g.name.toLowerCase().includes(q.toLowerCase()))
     : gearTypes;
-  const qColor = {normal:'#1eff00', hero:'#0070dd', epic:'#a335ee'};
+  // WoW quality: 勇士=yellow, 英雄=red, 史诗=purple
+  const qColor = {normal:'#f4e000', hero:'#e84040', epic:'#a335ee'};
   document.getElementById('l-type-grid').innerHTML = filtered.map(g => {
-    const iconHtml = g.icon
-      ? `<img src="${g.icon}" style="width:32px;height:32px;object-fit:cover;border-radius:6px">`
-      : `<span style="font-size:22px">${g.emoji||'🗡️'}</span>`;
+    const wowIco = slotIconUrl(g.name);
+    let iconHtml;
+    if(g.icon){iconHtml=`<img src="${g.icon}" style="width:32px;height:32px;object-fit:cover;border-radius:6px">`;}
+    else if(wowIco){iconHtml=`<img src="${wowIco}" style="width:32px;height:32px;object-fit:cover;border-radius:6px" onerror="this.style.display='none'">`;}
+    else{iconHtml=`<span style="font-size:22px">${g.emoji||'🗡️'}</span>`;}
     return `<div onclick="selectLootType(${g.id})"
       style="background:var(--bg-card2);border:1px solid var(--border);border-radius:9px;padding:12px 10px;cursor:pointer;text-align:center;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:6px"
       onmouseover="this.style.borderColor='var(--gold)';this.style.background='rgba(200,168,75,.08)'"
@@ -1117,9 +1120,10 @@ function selectLootType(gearTypeId) {
   document.getElementById('loot-step2').style.display = 'block';
   document.getElementById('l-confirm-btn').style.display = '';
   const iconEl = document.getElementById('l-selected-icon');
-  iconEl.innerHTML = g.icon
-    ? `<img src="${g.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`
-    : (g.emoji || '🗡️');
+  const wI = slotIconUrl(g.name);
+  if(g.icon){iconEl.innerHTML=`<img src="${g.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`;}
+  else if(wI){iconEl.innerHTML=`<img src="${wI}" style="width:100%;height:100%;object-fit:cover;border-radius:8px" onerror="this.innerHTML='${g.emoji||'🗡️'}'">` ;}
+  else{iconEl.innerHTML=g.emoji||'🗡️';}
   document.getElementById('l-selected-name').textContent = g.name;
   selectLootQual('normal', document.querySelector('.loot-qual-btn[data-qual="normal"]'));
 }
@@ -1136,10 +1140,10 @@ function lootBackToStep1() {
 
 function selectLootQual(qual, btn) {
   lootSelQual = qual;
-  const qColor   = {normal:'#1eff00', hero:'#0070dd', epic:'#a335ee'};
-  const qBg      = {normal:'rgba(30,255,0,.1)', hero:'rgba(0,112,221,.12)', epic:'rgba(163,53,238,.12)'};
-  const qBorder  = {normal:'rgba(30,255,0,.5)', hero:'rgba(0,112,221,.5)', epic:'rgba(163,53,238,.5)'};
-  const qBorderDim={normal:'rgba(30,255,0,.25)',hero:'rgba(0,112,221,.25)',epic:'rgba(163,53,238,.25)'};
+  const qColor   = {normal:'#f4e000', hero:'#e84040', epic:'#a335ee'};
+  const qBg      = {normal:'rgba(244,224,0,.1)', hero:'rgba(232,64,64,.12)', epic:'rgba(163,53,238,.12)'};
+  const qBorder  = {normal:'rgba(244,224,0,.6)', hero:'rgba(232,64,64,.6)', epic:'rgba(163,53,238,.6)'};
+  const qBorderDim={normal:'rgba(244,224,0,.25)',hero:'rgba(232,64,64,.25)',epic:'rgba(163,53,238,.25)'};
   document.querySelectorAll('.loot-qual-btn').forEach(b => {
     const q = b.dataset.qual;
     b.style.color = 'var(--muted)';
@@ -1236,40 +1240,93 @@ function renderDkp(){
 }
 
 // ══ GEAR ══
+// WoW equipment slot icons from Wowhead CDN
+const SLOT_ICONS = {
+  '头盔':    'inv_helmet_11',
+  '胸甲':    'inv_chest_cloth_04',
+  '腿甲':    'inv_pants_cloth_03',
+  '肩甲':    'inv_shoulder_25',
+  '手套':    'inv_gauntlets_07',
+  '腰带':    'inv_belt_13',
+  '靴子':    'inv_boots_cloth_03',
+  '护腕':    'inv_bracer_07',
+  '披风':    'inv_misc_cape_14',
+  '戒指':    'inv_jewelry_ring_14',
+  '项链':    'inv_jewelry_necklace_13',
+  '饰品':    'inv_jewelry_trinketpvp_01',
+  '武器':    'inv_sword_39',
+  '武器·单手剑': 'inv_sword_39',
+  '武器·双手剑': 'inv_sword_06',
+  '武器·双手锤': 'inv_mace_10',
+  '武器·单手锤': 'inv_mace_01',
+  '武器·匕首': 'inv_weapon_shortblade_05',
+  '武器·法杖': 'inv_staff_06',
+  '武器·长杆': 'inv_staff_13',
+  '武器·弓':  'inv_weapon_bow_02',
+  '武器·枪':  'inv_weapon_rifle_02',
+  '武器·拳套': 'inv_gauntlets_22',
+  '武器·副手': 'inv_offhand_hallowfalllair_d_01',
+  '武器·盾牌': 'inv_shield_06',
+  '套装兑换': 'inv_misc_ticket_tarot_wheel',
+};
+function slotIcon(name) {
+  // Try exact match first, then prefix match
+  if (SLOT_ICONS[name]) return SLOT_ICONS[name];
+  for (const key of Object.keys(SLOT_ICONS)) {
+    if (name && name.includes(key)) return SLOT_ICONS[key];
+  }
+  return null;
+}
+function slotIconUrl(name) {
+  const icon = slotIcon(name);
+  return icon ? `https://wow.zamimg.com/images/wow/icons/medium/${icon}.jpg` : null;
+}
+
+// Quality: 勇士=yellow, 英雄=red, 史诗=purple  (correct WoW order)
+const QUAL_COLOR = { n:'#f4e000', h:'#e84040', e:'#a335ee' };
+const QUAL_BG    = { n:'rgba(244,224,0,.1)', h:'rgba(232,64,64,.1)', e:'rgba(163,53,238,.1)' };
+const QUAL_LABEL = { n:'勇士', h:'英雄', e:'史诗' };
+
 function renderGear(){
   const admin=typeof isAdmin!=='undefined'&&isAdmin;
   const cards=document.getElementById('gear-type-cards');
   if(!cards)return;
   cards.innerHTML=gearTypes.map(g=>{
-    const iconHtml=g.icon
-      ?`<img src="${g.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:7px">`
-      :`<span style="font-size:22px">${g.emoji||'🗡️'}</span>`;
+    // Icon: uploaded > WoW slot icon > emoji fallback
+    const wowIcon = slotIconUrl(g.name);
+    let iconHtml;
+    if(g.icon){
+      iconHtml=`<img src="${g.icon}" style="width:100%;height:100%;object-fit:cover;border-radius:7px">`;
+    } else if(wowIcon){
+      iconHtml=`<img src="${wowIcon}" style="width:100%;height:100%;object-fit:cover;border-radius:7px" onerror="this.style.display='none';this.nextSibling.style.display='flex'"><span style="display:none;font-size:22px;width:100%;height:100%;align-items:center;justify-content:center">${g.emoji||'🗡️'}</span>`;
+    } else {
+      iconHtml=`<span style="font-size:22px">${g.emoji||'🗡️'}</span>`;
+    }
     const ro=!admin;
-    return`<div class="gear-type-card">
+    // Prices in order: 勇士(n) → 英雄(h) → 史诗(e)
+    const priceFields = [
+      {key:'n', label:QUAL_LABEL.n, color:QUAL_COLOR.n, val:g.n},
+      {key:'h', label:QUAL_LABEL.h, color:QUAL_COLOR.h, val:g.h},
+      {key:'e', label:QUAL_LABEL.e, color:QUAL_COLOR.e, val:g.e},
+    ];
+    return`<div class="gear-type-card" style="border-top:2px solid ${QUAL_COLOR.e}22">
       ${admin?`<button class="gtc-del" onclick="rmG(${g.id})" title="删除">×</button>`:''}
       <div class="gtc-header">
-        <div class="gtc-icon" ${admin?`onclick="triggerGTIconEdit(${g.id})" title="点击更换图标"`:''}>${iconHtml}</div>
+        <div class="gtc-icon" ${admin?`onclick="triggerGTIconEdit(${g.id})" title="点击更换图标"`:''}
+          style="border-radius:6px;overflow:hidden;background:#1a1a2e">${iconHtml}</div>
         <input class="gtc-name-input" value="${g.name}" ${ro?'readonly':''}
           onchange="updG(${g.id},'name',this.value)"
           onblur="updG(${g.id},'name',this.value)"
-          style="font-size:13px;font-weight:600">
+          style="font-size:13px;font-weight:700">
       </div>
       <div class="gtc-prices">
+        ${priceFields.map(f=>`
         <div class="gtc-price-cell">
-          <div class="gtc-price-label" style="color:var(--green)">英雄</div>
-          <input class="gtc-price-input" type="number" value="${g.n}" ${ro?'readonly':''}
-            style="color:var(--green)" onchange="updG(${g.id},'n',this.value)">
-        </div>
-        <div class="gtc-price-cell">
-          <div class="gtc-price-label" style="color:#0070dd">勇士</div>
-          <input class="gtc-price-input" type="number" value="${g.h}" ${ro?'readonly':''}
-            style="color:#0070dd" onchange="updG(${g.id},'h',this.value)">
-        </div>
-        <div class="gtc-price-cell">
-          <div class="gtc-price-label" style="color:#a335ee">史诗</div>
-          <input class="gtc-price-input" type="number" value="${g.e}" ${ro?'readonly':''}
-            style="color:#a335ee" onchange="updG(${g.id},'e',this.value)">
-        </div>
+          <div class="gtc-price-label" style="color:${f.color};letter-spacing:.5px">${f.label}</div>
+          <input class="gtc-price-input" type="number" value="${f.val}" ${ro?'readonly':''}
+            style="color:${f.color};border-color:${f.color}33;background:${QUAL_BG[f.key]};font-weight:700"
+            onchange="updG(${g.id},'${f.key}',this.value)">
+        </div>`).join('')}
       </div>
       ${admin?`<input type="file" id="gt-edit-${g.id}" accept="image/*" style="display:none" onchange="applyGTIcon(${g.id},this)">`:''}
     </div>`;
