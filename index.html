@@ -1200,13 +1200,6 @@ function removeFromRoster(evtId, memberId) {
 }
 
 
-  const matches = wowItems.filter(i => i.toLowerCase().includes(q.toLowerCase()) || i.includes(q));
-  if (!matches.length) { box.style.display='none'; return; }
-  box.style.display = 'block';
-  box.innerHTML = matches.map(i => `<div onclick="pickLootItem('${i}')" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);transition:.12s" onmouseover="this.style.background='rgba(201,168,76,.08)'" onmouseout="this.style.background=''">${i}</div>`).join('');
-}
-
-
 // ══ AUTH ══
 let adminCreds = { user: 'admin', pass: 'at2025' }; // default creds
 let isAdmin = false;
