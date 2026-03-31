@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AUCKLAND TRANSPORT · 公会DKP管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #c9a84c;
+  --gold-light: #f0d080;
+  --gold-dark: #8a6a1e;
+  --bg-dark: #0a0c10;
+  --bg-card: #111420;
+  --bg-card2: #161b2a;
+  --border: rgba(201,168,76,0.25);
+  --border-bright: rgba(201,168,76,0.6);
+  --text: #e8dfc8;
+  --text-muted: #8a8070;
+  --red: #c44;
+  --green: #4a9;
+  --blue: #4af;
+  --purple: #a6f;
+  --shadow: 0 4px 32px rgba(0,0,0,0.7);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg-dark);color:var(--text);font-family:'Noto Sans SC',sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 20%,rgba(201,168,76,0.04) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(60,80,180,0.06) 0%,transparent 60%);pointer-events:none;z-index:0}
+
+/* ---- HEADER ---- */
+.header{position:sticky;top:0;z-index:100;background:rgba(10,12,16,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 24px}
+.header-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:20px;height:64px}
+.guild-logo{display:flex;flex-direction:column;line-height:1}
+.guild-logo .en{font-family:'Cinzel',serif;font-size:15px;font-weight:900;color:var(--gold);letter-spacing:3px}
+.guild-logo .cn{font-size:10px;color:var(--text-muted);letter-spacing:2px;margin-top:2px}
+.nav{display:flex;gap:4px;margin-left:auto}
+.nav-btn{background:none;border:1px solid transparent;color:var(--text-muted);font-family:'Noto Sans SC',sans-serif;font-size:13px;padding:6px 14px;border-radius:6px;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:6px}
+.nav-btn:hover,.nav-btn.active{color:var(--gold);border-color:var(--border);background:rgba(201,168,76,0.06)}
+.nav-btn svg{width:14px;height:14px}
+
+/* ---- LAYOUT ---- */
+.app{max-width:1400px;margin:0 auto;padding:24px;position:relative;z-index:1}
+.page{display:none}.page.active{display:block}
+
+/* ---- CALENDAR PAGE ---- */
+.cal-layout{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
+.section-title{font-family:'Cinzel',serif;font-size:13px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.calendar-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px}
+.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.cal-month{font-family:'Cinzel',serif;font-size:18px;font-weight:600;color:var(--gold)}
+.cal-nav{background:none;border:1px solid var(--border);color:var(--text-muted);width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:16px;transition:.2s}
+.cal-nav:hover{color:var(--gold);border-color:var(--gold)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-dow{text-align:center;font-size:11px;color:var(--text-muted);padding:6px 0;letter-spacing:1px}
+.cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;border:1px solid transparent;transition:.2s;font-size:13px;position:relative}
+.cal-day:hover{background:rgba(201,168,76,0.08);border-color:var(--border)}
+.cal-day.today{background:rgba(201,168,76,0.12);border-color:var(--border-bright);color:var(--gold)}
+.cal-day.has-event::after{content:'';position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:var(--gold)}
+.cal-day.selected{background:rgba(201,168,76,0.2);border-color:var(--gold)}
+.cal-day.empty{opacity:0}
+
+.events-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px}
+.event-list{display:flex;flex-direction:column;gap:10px;max-height:500px;overflow-y:auto}
+.event-item{background:var(--bg-card2);border:1px solid var(--border);border-radius:8px;padding:14px;cursor:pointer;transition:.2s}
+.event-item:hover{border-color:var(--border-bright);background:rgba(201,168,76,0.04)}
+.event-item.active-event{border-color:var(--gold);background:rgba(201,168,76,0.08)}
+.event-date-badge{font-size:10px;color:var(--text-muted);margin-bottom:4px;letter-spacing:1px}
+.event-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px}
+.event-meta{display:flex;gap:8px;flex-wrap:wrap}
+.badge{font-size:10px;padding:2px 8px;border-radius:99px;border:1px solid}
+.badge-gold{color:var(--gold);border-color:var(--gold-dark)}
+.badge-green{color:var(--green);border-color:rgba(68,170,102,0.4)}
+.badge-blue{color:var(--blue);border-color:rgba(68,170,255,0.4)}
+.badge-red{color:var(--red);border-color:rgba(204,68,68,0.4)}
+
+/* ---- ACTIVE EVENT PANEL ---- */
+.active-event-wrap{margin-top:20px}
+.event-detail-card{background:var(--bg-card);border:1px solid var(--border-bright);border-radius:12px;padding:24px}
+.event-detail-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px}
+.event-detail-title{font-family:'Cinzel',serif;font-size:20px;font-weight:600;color:var(--gold)}
+.event-detail-sub{font-size:12px;color:var(--text-muted);margin-top:4px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:7px;border:none;cursor:pointer;font-family:'Noto Sans SC',sans-serif;font-size:13px;font-weight:500;transition:.2s}
+.btn-primary{background:linear-gradient(135deg,var(--gold-dark),var(--gold));color:#0a0c10}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-outline{background:none;border:1px solid var(--border);color:var(--text-muted)}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold)}
+.btn-danger{background:rgba(204,68,68,0.15);border:1px solid rgba(204,68,68,0.4);color:var(--red)}
+.btn-green{background:rgba(68,170,102,0.15);border:1px solid rgba(68,170,102,0.4);color:var(--green)}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+.dkp-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;padding:16px;background:rgba(201,168,76,0.04);border:1px solid var(--border);border-radius:8px}
+.dkp-actions .label{font-size:12px;color:var(--text-muted);margin-bottom:6px}
+.quick-dkp{display:flex;flex-direction:column;gap:4px}
+
+.roster-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:12px}
+.roster-card{background:var(--bg-card2);border:1px solid var(--border);border-radius:8px;padding:12px;cursor:pointer;transition:.2s;position:relative}
+.roster-card:hover{border-color:var(--border-bright)}
+.roster-card.present{border-color:rgba(68,170,102,0.4)}
+.roster-card.absent{opacity:.5;border-color:rgba(204,68,68,0.3)}
+.roster-card.sub{border-color:rgba(255,170,0,0.4)}
+.member-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px}
+.member-role{font-size:11px;color:var(--text-muted)}
+.member-dkp{position:absolute;right:12px;top:12px;font-size:13px;font-weight:700;color:var(--gold)}
+.role-tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:99px;margin-right:4px;margin-top:4px}
+.role-tank{background:rgba(68,102,255,0.2);color:#88aaff;border:1px solid rgba(68,102,255,0.4)}
+.role-heal{background:rgba(68,200,100,0.2);color:#88ddaa;border:1px solid rgba(68,200,100,0.4)}
+.role-dps{background:rgba(220,60,60,0.2);color:#ffaaaa;border:1px solid rgba(220,60,60,0.4)}
+
+/* ---- LOOT PANEL ---- */
+.loot-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-top:20px}
+.loot-selector{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:16px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-label{font-size:11px;color:var(--text-muted);letter-spacing:1px}
+.form-select,.form-input{background:var(--bg-card2);border:1px solid var(--border);color:var(--text);font-family:'Noto Sans SC',sans-serif;font-size:13px;padding:8px 12px;border-radius:7px;outline:none;transition:.2s;width:100%}
+.form-select:focus,.form-input:focus{border-color:var(--gold)}
+.form-select option{background:var(--bg-card2)}
+
+.loot-log{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto}
+.loot-entry{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-card2);border:1px solid var(--border);border-radius:7px;font-size:12px}
+.loot-entry .time{color:var(--text-muted);min-width:50px}
+.loot-entry .who{color:var(--text);font-weight:500;min-width:90px}
+.loot-entry .item{flex:1;color:var(--gold-light)}
+.loot-entry .cost{color:var(--red);font-weight:700;min-width:50px;text-align:right}
+.loot-entry .quality-epic{color:#a335ee}
+.loot-entry .quality-hero{color:#0070dd}
+.loot-entry .quality-normal{color:#1eff00}
+
+/* ---- MEMBERS PAGE ---- */
+.members-toolbar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.members-toolbar .form-input{max-width:240px}
+.members-table-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th{background:rgba(201,168,76,0.06);padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--gold);letter-spacing:2px;border-bottom:1px solid var(--border)}
+td{padding:10px 16px;font-size:13px;border-bottom:1px solid rgba(201,168,76,0.08)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(201,168,76,0.03)}
+.dkp-val{font-weight:700;color:var(--gold)}
+.dkp-neg{color:var(--red)}
+
+/* ---- DKP HISTORY ---- */
+.history-filters{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.history-table{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+
+/* ---- MODALS ---- */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg-card);border:1px solid var(--border-bright);border-radius:14px;padding:28px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow)}
+.modal-title{font-family:'Cinzel',serif;font-size:18px;color:var(--gold);margin-bottom:20px}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* ---- LOOT MEMBER PICKER ---- */
+.member-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;max-height:300px;overflow-y:auto;padding:4px}
+.picker-card{background:var(--bg-card2);border:1px solid var(--border);border-radius:7px;padding:10px;cursor:pointer;transition:.2s;text-align:center}
+.picker-card:hover{border-color:var(--gold);background:rgba(201,168,76,0.08)}
+.picker-card.selected{border-color:var(--gold);background:rgba(201,168,76,0.15)}
+.picker-name{font-size:12px;color:var(--text)}
+.picker-dkp{font-size:11px;color:var(--text-muted)}
+
+/* ---- STATS CARDS ---- */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px}
+.stat-label{font-size:11px;color:var(--text-muted);letter-spacing:1px;margin-bottom:6px}
+.stat-val{font-family:'Cinzel',serif;font-size:24px;font-weight:600;color:var(--gold)}
+.stat-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+
+/* ---- SCROLLBAR ---- */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(201,168,76,0.3);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(201,168,76,0.5)}
+
+/* ---- TOAST ---- */
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--bg-card);border:1px solid var(--border-bright);color:var(--text);font-size:13px;padding:10px 18px;border-radius:8px;box-shadow:var(--shadow);transform:translateX(120%);transition:.3s;pointer-events:auto}
+.toast.show{transform:translateX(0)}
+.toast.success{border-color:rgba(68,170,102,0.6);color:var(--green)}
+.toast.error{border-color:rgba(204,68,68,0.6);color:var(--red)}
+
+/* ---- EVENT FORM MODAL ---- */
+.phase-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.phase-btn{background:var(--bg-card2);border:1px solid var(--border);color:var(--text-muted);padding:6px 14px;border-radius:7px;cursor:pointer;font-size:12px;font-family:'Noto Sans SC',sans-serif;transition:.2s}
+.phase-btn:hover,.phase-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.08)}
+
+@media(max-width:900px){
+  .cal-layout{grid-template-columns:1fr}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .loot-selector{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+}
+@media(max-width:600px){
+  .app{padding:12px}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .nav-btn span{display:none}
+  .roster-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="guild-logo">
+      <span class="en">AUCKLAND TRANSPORT</span>
+      <span class="cn">公会 · 魔兽世界</span>
+    </div>
+    <nav class="nav">
+      <button class="nav-btn active" onclick="showPage('events')" id="nav-events">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 2a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1V3a1 1 0 00-1-1H3zm1 2h8v1H4V4zm0 3h8v1H4V7zm0 3h5v1H4v-1z"/></svg>
+        <span>活动日历</span>
+      </button>
+      <button class="nav-btn" onclick="showPage('members')" id="nav-members">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 8a3 3 0 100-6 3 3 0 000 6zm-5 6a5 5 0 1110 0H3z"/></svg>
+        <span>团员管理</span>
+      </button>
+      <button class="nav-btn" onclick="showPage('dkp')" id="nav-dkp">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l1.5 3 3.5.5-2.5 2.5.5 3.5L8 9l-3 1.5.5-3.5L3 4.5 6.5 4z"/></svg>
+        <span>DKP排行</span>
+      </button>
+      <button class="nav-btn" onclick="showPage('loot')" id="nav-loot">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v1H2V4zM1 7h14v6a2 2 0 01-2 2H3a2 2 0 01-2-2V7zm5 2v2h4V9H6z"/></svg>
+        <span>装备管理</span>
+      </button>
+    </nav>
+  </div>
+</div>
+
+<div class="app">
+
+<!-- ============ EVENTS PAGE ============ -->
+<div class="page active" id="page-events">
+  <div class="cal-layout">
+    <!-- Calendar -->
+    <div>
+      <div class="section-title">活动日历</div>
+      <div class="calendar-wrap">
+        <div class="cal-header">
+          <button class="cal-nav" onclick="calNav(-1)">‹</button>
+          <div class="cal-month" id="cal-month-label"></div>
+          <button class="cal-nav" onclick="calNav(1)">›</button>
+        </div>
+        <div class="cal-grid">
+          <div class="cal-dow">日</div><div class="cal-dow">一</div><div class="cal-dow">二</div>
+          <div class="cal-dow">三</div><div class="cal-dow">四</div><div class="cal-dow">五</div><div class="cal-dow">六</div>
+          <div id="cal-days"></div>
+        </div>
+      </div>
+
+      <!-- Active Event Detail -->
+      <div class="active-event-wrap" id="event-detail-wrap" style="display:none">
+        <div class="section-title" style="margin-top:20px">活动详情</div>
+        <div class="event-detail-card" id="event-detail-card"></div>
+      </div>
+    </div>
+
+    <!-- Events Sidebar -->
+    <div>
+      <div class="section-title">
+        全部活动
+        <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openNewEventModal()">＋ 新建活动</button>
+      </div>
+      <div class="events-panel">
+        <div class="event-list" id="event-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MEMBERS PAGE ============ -->
+<div class="page" id="page-members">
+  <div class="section-title">团员管理</div>
+  <div class="members-toolbar">
+    <input class="form-input" type="text" placeholder="搜索团员名字..." oninput="filterMembers(this.value)" style="max-width:240px">
+    <select class="form-select" onchange="filterRole(this.value)" style="max-width:140px">
+      <option value="">全部职责</option>
+      <option value="T">坦克</option>
+      <option value="N">治疗</option>
+      <option value="DPS">输出</option>
+    </select>
+    <button class="btn btn-primary" onclick="openMemberModal()">＋ 添加团员</button>
+  </div>
+  <div class="members-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>微信名</th><th>游戏ID</th><th>角色名</th><th>职业</th><th>职责</th><th>状态</th><th>当前DKP</th><th>备注</th><th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="members-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============ DKP PAGE ============ -->
+<div class="page" id="page-dkp">
+  <div class="section-title">DKP 排行榜</div>
+  <div class="stats-row" id="dkp-stats"></div>
+  <div class="members-table-wrap">
+    <table>
+      <thead>
+        <tr><th>排名</th><th>角色名</th><th>职业</th><th>职责</th><th>当前DKP</th><th>本次变化</th><th>状态</th></tr>
+      </thead>
+      <tbody id="dkp-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============ LOOT MGMT PAGE ============ -->
+<div class="page" id="page-loot">
+  <div class="section-title">装备管理</div>
+  <div style="display:grid;grid-template-columns:1fr 360px;gap:20px">
+    <div>
+      <div class="loot-panel">
+        <div class="section-title" style="font-size:11px">装备 DKP 价格设置</div>
+        <div class="members-table-wrap">
+          <table>
+            <thead><tr><th>装备类型</th><th>品质</th><th>DKP价格</th><th>操作</th></tr></thead>
+            <tbody id="gear-table"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-outline btn-sm" style="margin-top:12px" onclick="addGearType()">＋ 添加装备类型</button>
+      </div>
+    </div>
+    <div>
+      <div class="events-panel" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <div class="section-title" style="font-size:11px">近期分装备记录</div>
+        <div class="loot-log" id="global-loot-log"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<!-- ============ MODALS ============ -->
+
+<!-- New Event Modal -->
+<div class="modal-overlay" id="modal-event">
+  <div class="modal">
+    <div class="modal-title">📅 创建活动</div>
+    <div class="modal-grid">
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">活动名称</label>
+        <input class="form-input" id="evt-name" placeholder="例：至暗之夜 第3周 英雄">
+      </div>
+      <div class="form-group">
+        <label class="form-label">日期</label>
+        <input class="form-input" type="date" id="evt-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">开始时间</label>
+        <input class="form-input" type="time" id="evt-time" value="20:00">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">团本类型</label>
+        <select class="form-select" id="evt-raid">
+          <option>至暗之夜（正常）</option>
+          <option>至暗之夜（英雄）</option>
+          <option>至暗之夜（史诗）</option>
+          <option>丰饶之战（正常）</option>
+          <option>丰饶之战（英雄）</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">备注</label>
+        <input class="form-input" id="evt-note" placeholder="可选备注">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-event')">取消</button>
+      <button class="btn btn-primary" onclick="createEvent()">创建活动</button>
+    </div>
+  </div>
+</div>
+
+<!-- DKP Add Modal -->
+<div class="modal-overlay" id="modal-dkp">
+  <div class="modal">
+    <div class="modal-title" id="dkp-modal-title">➕ 一键加分</div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">选择阶段</label>
+      <div class="phase-btns">
+        <button class="phase-btn" onclick="selectPhase('集合',10,this)">集合分 (+10)</button>
+        <button class="phase-btn" onclick="selectPhase('每小时',30,this)">每小时加分 (+30)</button>
+        <button class="phase-btn" onclick="selectPhase('Boss击杀',20,this)">Boss击杀 (+20)</button>
+        <button class="phase-btn" onclick="selectPhase('Boss首杀',50,this)">Boss首杀 (+50)</button>
+        <button class="phase-btn" onclick="selectPhase('结束',10,this)">活动结束 (+10)</button>
+        <button class="phase-btn" onclick="selectPhase('全勤',20,this)">全勤奖励 (+20)</button>
+        <button class="phase-btn" onclick="selectPhase('自定义',0,this)">自定义</button>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">分数</label>
+      <input class="form-input" type="number" id="dkp-amount" value="10">
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">应用范围</label>
+      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+        <button class="phase-btn active" id="scope-all" onclick="setScope('all',this)">全体出席</button>
+        <button class="phase-btn" id="scope-sel" onclick="setScope('selected',this)">选择团员</button>
+      </div>
+    </div>
+    <div id="dkp-member-sel" style="display:none;margin-bottom:14px">
+      <label class="form-label" style="font-size:11px;color:var(--text-muted);margin-bottom:8px;display:block">点击选择团员</label>
+      <div class="member-picker" id="dkp-picker"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">备注</label>
+      <input class="form-input" id="dkp-note" placeholder="例：击杀厄普希拉">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-dkp')">取消</button>
+      <button class="btn btn-primary" onclick="confirmDkp()">确认加分</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loot Modal -->
+<div class="modal-overlay" id="modal-loot">
+  <div class="modal">
+    <div class="modal-title">🎁 分配装备</div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">选择装备</label>
+      <div style="display:flex;gap:8px">
+        <select class="form-select" id="loot-item-select" style="flex:1"></select>
+        <select class="form-select" id="loot-quality" style="width:100px">
+          <option value="normal">英雄</option>
+          <option value="hero">勇士</option>
+          <option value="epic">史诗</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">扣除 DKP</label>
+      <input class="form-input" type="number" id="loot-dkp" value="50">
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+      <label class="form-label">选择得到装备的团员</label>
+    </div>
+    <div class="member-picker" id="loot-picker"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-loot')">取消</button>
+      <button class="btn btn-danger" onclick="confirmLoot()">确认扣分</button>
+    </div>
+  </div>
+</div>
+
+<!-- Member Modal -->
+<div class="modal-overlay" id="modal-member">
+  <div class="modal">
+    <div class="modal-title" id="member-modal-title">添加团员</div>
+    <div class="modal-grid">
+      <div class="form-group">
+        <label class="form-label">微信名</label>
+        <input class="form-input" id="m-wechat" placeholder="微信昵称">
+      </div>
+      <div class="form-group">
+        <label class="form-label">战网ID</label>
+        <input class="form-input" id="m-battlenet" placeholder="BattleTag#1234">
+      </div>
+      <div class="form-group">
+        <label class="form-label">角色名</label>
+        <input class="form-input" id="m-char" placeholder="游戏角色名">
+      </div>
+      <div class="form-group">
+        <label class="form-label">职业</label>
+        <select class="form-select" id="m-class">
+          <option>法师</option><option>猎人</option><option>术士</option>
+          <option>战士</option><option>骑士</option><option>DK</option>
+          <option>DH</option><option>德鲁伊</option><option>萨满</option>
+          <option>僧侣</option><option>盗贼</option><option>牧师</option>
+          <option>唤灵师</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">职责</label>
+        <select class="form-select" id="m-role">
+          <option value="T">坦克</option>
+          <option value="N">治疗</option>
+          <option value="DPS">输出</option>
+          <option value="会长">会长</option>
+          <option value="副会长">副会长</option>
+          <option value="团长">团长</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">状态</label>
+        <select class="form-select" id="m-status">
+          <option value="在">在</option>
+          <option value="请假">请假</option>
+          <option value="长期请假">长期请假</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">初始DKP</label>
+        <input class="form-input" type="number" id="m-dkp" value="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">备注</label>
+        <input class="form-input" id="m-note" placeholder="可选备注">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-member')">取消</button>
+      <button class="btn btn-primary" onclick="saveMember()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ========== DATA ==========
+let members = [
+  {id:1,wechat:'诺仔',battlenet:'诺仔',char:'NaN',cls:'法师',role:'团长',status:'在',dkp:493,note:''},
+  {id:2,wechat:'人匠',battlenet:'五娘',char:'五娘',cls:'武僧T',role:'T',status:'请假',dkp:0,note:'3月31日回新西兰'},
+  {id:3,wechat:'Junshy',battlenet:'junshy',char:'从没扛住',cls:'战士T',role:'T',status:'在',dkp:448,note:''},
+  {id:4,wechat:'Wilson Yao',battlenet:'老狗',char:'Gshadow',cls:'骑士',role:'副会长',status:'在',dkp:408,note:'3月31日回国'},
+  {id:5,wechat:'Kion Zhang',battlenet:'月亮/Kion/Howl',char:'优衣库',cls:'骑士',role:'N',status:'在',dkp:493,note:''},
+  {id:6,wechat:'小骆驼',battlenet:'小骆驼',char:'反补世界树',cls:'僧侣',role:'N',status:'在',dkp:250,note:''},
+  {id:7,wechat:'大灰兔子',battlenet:'大灰兔子',char:'大灰兔子',cls:'牧师',role:'N',status:'在',dkp:421,note:''},
+  {id:8,wechat:'美女姐姐是治疗',battlenet:'美女姐姐',char:'美女姐姐',cls:'牧师',role:'N',status:'在',dkp:388,note:'2月19日请假'},
+  {id:9,wechat:'冒险者samblahblah',battlenet:'冒险者',char:'Samblahblah',cls:'德鲁伊',role:'N',status:'在',dkp:354,note:'替补'},
+  {id:10,wechat:'summer',battlenet:'记忆若能封守#5606',char:'不急慢慢来',cls:'德鲁伊',role:'N',status:'在',dkp:-98,note:'出席转替补'},
+  {id:11,wechat:'醒醒快去睡吧',battlenet:'Behemothe#51482',char:'醒醒就是睡吧',cls:'萨满',role:'N',status:'在',dkp:250,note:''},
+  {id:12,wechat:'百里Ruiya',battlenet:'',char:'',cls:'法师',role:'DPS',status:'请假',dkp:0,note:''},
+  {id:13,wechat:'Mideta',battlenet:'输了就掀桌',char:'沁水宫',cls:'法师',role:'DPS',status:'在',dkp:239,note:''},
+  {id:14,wechat:'Victor',battlenet:'兽兽有力量',char:'表裱我',cls:'法师',role:'DPS',status:'在',dkp:489,note:'替补'},
+  {id:15,wechat:'Grace',battlenet:'blackpink',char:'安妮亚',cls:'术士',role:'DPS',status:'在',dkp:443,note:''},
+  {id:16,wechat:'再见晚星',battlenet:'再见晚星',char:'王主任',cls:'术士',role:'DPS',status:'在',dkp:398,note:''},
+  {id:17,wechat:'蔡星炫maaaario',battlenet:'马小二',char:'烧死那只狐狸',cls:'术士',role:'DPS',status:'在',dkp:282,note:''},
+  {id:18,wechat:'Kino48',battlenet:'Kino',char:'',cls:'术士',role:'DPS',status:'缺席',dkp:0,note:''},
+  {id:19,wechat:'Janego',battlenet:'来都来了#51574',char:'花生花',cls:'唤灵师',role:'DPS',status:'在',dkp:493,note:''},
+  {id:20,wechat:'王浩',battlenet:'文钰',char:'钰钰文文',cls:'唤灵师',role:'DPS',status:'在',dkp:444,note:'出席转替补'},
+  {id:21,wechat:'SRV',battlenet:'blues',char:'捕鹿司',cls:'猎人',role:'DPS',status:'在',dkp:457,note:''},
+  {id:22,wechat:'晴天晒个太阳',battlenet:'晴天',char:'晴天不吃糖',cls:'猎人',role:'DPS',status:'在',dkp:493,note:''},
+  {id:23,wechat:'x',battlenet:'塔姆',char:'阿姨给点钱',cls:'猎人',role:'DPS',status:'在',dkp:439,note:''},
+  {id:24,wechat:'紫叶如焰',battlenet:'紫叶如焰',char:'落叶满长安',cls:'德鲁伊',role:'DPS',status:'在',dkp:439,note:''},
+  {id:25,wechat:'Luckymax',battlenet:'LUCKYMAXY#5516',char:'妖王狐',cls:'萨满',role:'会长',status:'在',dkp:493,note:''},
+  {id:26,wechat:'No.',battlenet:'咩咩',char:'一只小羊咩咩',cls:'DK',role:'DPS',status:'在',dkp:493,note:''},
+  {id:27,wechat:'韩韩',battlenet:'皮卡皮#51404',char:'阿兰克斯',cls:'DK',role:'DPS',status:'在',dkp:399,note:'出席转替补'},
+  {id:28,wechat:'Evan_Yi',battlenet:'Evan_Yi',char:'南希',cls:'DK',role:'DPS',status:'在',dkp:439,note:''},
+  {id:29,wechat:'Sunny',battlenet:'Sunny',char:'狮子的咆哮',cls:'DK',role:'DPS',status:'在',dkp:457,note:''},
+  {id:30,wechat:'Jason Tan',battlenet:'大福星',char:'右火',cls:'战士',role:'DPS',status:'在',dkp:444,note:'出席转替补'},
+  {id:31,wechat:'Terry',battlenet:'Soo',char:'Dolphins',cls:'DH',role:'DPS',status:'在',dkp:216,note:'长期请假'},
+  {id:32,wechat:'艾蓝',battlenet:'艾蓝#51669麋鹿',char:'咸恩静',cls:'盗贼',role:'DPS',status:'在',dkp:367,note:''},
+  {id:33,wechat:'米修',battlenet:'米修',char:'尤其',cls:'DH',role:'DPS',status:'在',dkp:250,note:''},
+  {id:34,wechat:'幽',battlenet:'GMYIIP#5148',char:'幽',cls:'DH',role:'DPS',status:'在',dkp:493,note:''},
+  {id:35,wechat:'三哥带你飞',battlenet:'三哥带你飞#5314',char:'Aemeath',cls:'DH',role:'DPS',status:'在',dkp:313,note:''},
+  {id:36,wechat:'张兆轩',battlenet:'HINZ',char:'Hinz',cls:'骑士',role:'DPS',status:'在',dkp:457,note:''},
+  {id:37,wechat:'见血封喉',battlenet:'机械之忍#5559',char:'见血封喉',cls:'盗贼',role:'DPS',status:'在',dkp:367,note:''},
+  {id:38,wechat:'费雷德',battlenet:'费雷德#51928',char:'美食家',cls:'战士',role:'DPS',status:'在',dkp:156,note:'替补'},
+  {id:39,wechat:'时光飞逝',battlenet:'KKY',char:'没蓝了',cls:'法师',role:'DPS',status:'在',dkp:66,note:'替补'},
+];
+
+let events = [
+  {id:1,name:'至暗之夜 第2周 CD',date:'2025-03-26',time:'20:00',raid:'至暗之夜（英雄）',note:'本周CD活动',status:'completed',
+   roster:[1,3,4,5,6,7,8,9,10,11,13,14,15,16,17,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39],
+   dkpLog:[
+     {type:'集合',amount:10,scope:'all',note:'集合签到',time:'20:00'},
+     {type:'每小时',amount:30,scope:'all',note:'活动进行中',time:'21:00'},
+     {type:'Boss击杀',amount:20,scope:'all',note:'击杀全部Boss',time:'22:30'},
+     {type:'结束',amount:10,scope:'all',note:'活动结束',time:'23:00'},
+   ],
+   lootLog:[
+     {memberId:15,item:'魔法师的长袍',quality:'epic',dkp:50,time:'21:15'},
+     {memberId:8,item:'治愈者腰带',quality:'normal',dkp:30,time:'22:00'},
+   ]
+  }
+];
+
+let gearTypes = [
+  {id:1,name:'武器（双手）',hero:120,normal:80,epic:200},
+  {id:2,name:'武器（单手）',hero:100,normal:70,epic:180},
+  {id:3,name:'头盔',hero:80,normal:55,epic:150},
+  {id:4,name:'胸甲',hero:80,normal:55,epic:150},
+  {id:5,name:'腿甲',hero:80,normal:55,epic:150},
+  {id:6,name:'肩甲',hero:60,normal:40,epic:120},
+  {id:7,name:'手套',hero:50,normal:35,epic:100},
+  {id:8,name:'腰带',hero:50,normal:35,epic:100},
+  {id:9,name:'靴子',hero:50,normal:35,epic:100},
+  {id:10,name:'戒指',hero:60,normal:40,epic:120},
+  {id:11,name:'项链',hero:70,normal:45,epic:130},
+  {id:12,name:'三件套饰品',hero:90,normal:60,epic:160},
+];
+
+let wowItems = [
+  '主宰之盔','深渊铸造者之盔','虚空侵扰者面甲','夜之裂变护肩','深海之息护肩',
+  '暗影编织者胸甲','星空守护者胸甲','至暗之夜法袍','阴影之翼斗篷','虚空裂变腕甲',
+  '星光编织手套','深渊之爪手套','黑暗之心腰带','夜裂腿甲','暗影踏步靴',
+  '虚空裂变戒指','至暗信誓戒指','深渊之心项链','主宰力量饰品','星光之眼饰品',
+  '黑暗脉动饰品','阴影炮台主炮','虚空裂变巨剑','夜之终结弓','暗影之触法杖',
+  '星光匕首','深渊盾牌','阴影之矛','主宰之锤','虚空剑刃双刃'
+];
+
+let nextId = 100;
+let selectedEventId = null;
+let dkpScope = 'all';
+let selectedDkpMembers = [];
+let selectedLootMember = null;
+let editingMemberId = null;
+
+// ========== CALENDAR ==========
+let calYear, calMonth;
+function initCal(){
+  const now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+  renderCal();
+}
+function calNav(dir){
+  calMonth += dir;
+  if(calMonth<0){calMonth=11;calYear--;}
+  if(calMonth>11){calMonth=0;calYear++;}
+  renderCal();
+}
+function renderCal(){
+  const months=['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+  document.getElementById('cal-month-label').textContent = `${calYear} · ${months[calMonth]}`;
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const today = new Date();
+  const eventDates = new Set(events.map(e=>e.date));
+  let html = '';
+  for(let i=0;i<firstDay;i++) html+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = today.getFullYear()===calYear && today.getMonth()===calMonth && today.getDate()===d;
+    const hasEvt = eventDates.has(dateStr);
+    html+=`<div class="cal-day${isToday?' today':''}${hasEvt?' has-event':''}" onclick="selectDate('${dateStr}')">${d}</div>`;
+  }
+  document.getElementById('cal-days').innerHTML = html;
+  renderEventList();
+}
+function selectDate(dateStr){
+  const dayEvts = events.filter(e=>e.date===dateStr);
+  if(dayEvts.length>0) openEvent(dayEvts[0].id);
+}
+
+function renderEventList(){
+  const sorted = [...events].sort((a,b)=>b.date.localeCompare(a.date));
+  let html = sorted.map(e=>`
+    <div class="event-item${selectedEventId===e.id?' active-event':''}" onclick="openEvent(${e.id})">
+      <div class="event-date-badge">${e.date} ${e.time}</div>
+      <div class="event-name">${e.name}</div>
+      <div class="event-meta">
+        <span class="badge badge-gold">${e.raid}</span>
+        <span class="badge ${e.status==='completed'?'badge-green':e.status==='active'?'badge-blue':'badge-gold'}">
+          ${e.status==='completed'?'已完成':e.status==='active'?'进行中':'计划中'}
+        </span>
+        <span class="badge badge-blue">${e.roster.length}人</span>
+      </div>
+    </div>`).join('');
+  document.getElementById('event-list').innerHTML = html || '<div style="color:var(--text-muted);text-align:center;padding:20px">暂无活动</div>';
+}
+
+function openEvent(id){
+  selectedEventId = id;
+  const evt = events.find(e=>e.id===id);
+  if(!evt) return;
+  renderEventList();
+  renderEventDetail(evt);
+  document.getElementById('event-detail-wrap').style.display='block';
+}
+
+function renderEventDetail(evt){
+  const presentMembers = evt.roster.map(id=>members.find(m=>m.id===id)).filter(Boolean);
+  const rosterHtml = presentMembers.map(m=>`
+    <div class="roster-card present">
+      <div class="member-name">${m.char||m.wechat}</div>
+      <div class="member-role">${m.cls} · ${getRoleLabel(m.role)}</div>
+      <div class="member-dkp">${m.dkp}</div>
+    </div>`).join('');
+  const lootHtml = evt.lootLog.map(l=>{
+    const m = members.find(x=>x.id===l.memberId);
+    return `<div class="loot-entry">
+      <span class="time">${l.time}</span>
+      <span class="who">${m?m.char||m.wechat:'?'}</span>
+      <span class="item quality-${l.quality}">${l.item}</span>
+      <span class="cost">-${l.dkp}</span>
+    </div>`;
+  }).join('');
+  const dkpLogHtml = evt.dkpLog.map(d=>`
+    <div class="loot-entry">
+      <span class="time">${d.time}</span>
+      <span class="who" style="color:var(--green)">+${d.amount}</span>
+      <span class="item">${d.type} · ${d.note}</span>
+      <span class="cost" style="color:var(--text-muted)">${d.scope==='all'?'全体':'部分'}</span>
+    </div>`).join('');
+
+  document.getElementById('event-detail-card').innerHTML = `
+    <div class="event-detail-header">
+      <div>
+        <div class="event-detail-title">${evt.name}</div>
+        <div class="event-detail-sub">${evt.date} ${evt.time} · ${evt.raid}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-green btn-sm" onclick="openDkpModal(${evt.id})">⚡ 一键加分</button>
+        <button class="btn btn-primary btn-sm" onclick="openLootModal(${evt.id})">🎁 分配装备</button>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div class="section-title" style="font-size:11px;margin-bottom:10px">出席团员 (${presentMembers.length})</div>
+      <div class="roster-grid">${rosterHtml}</div>
+    </div>
+    ${dkpLogHtml?`
+    <div style="margin-bottom:16px">
+      <div class="section-title" style="font-size:11px;margin-bottom:10px">DKP记录</div>
+      <div class="loot-log">${dkpLogHtml}</div>
+    </div>`:''}
+    ${lootHtml?`
+    <div>
+      <div class="section-title" style="font-size:11px;margin-bottom:10px">装备分配</div>
+      <div class="loot-log">${lootHtml}</div>
+    </div>`:''}
+  `;
+}
+
+// ========== MEMBERS ==========
+let memberFilter = '';
+let roleFilter = '';
+function renderMembers(){
+  let filtered = members.filter(m=>{
+    const q = memberFilter.toLowerCase();
+    const match = !q || m.wechat.toLowerCase().includes(q)||m.char.toLowerCase().includes(q)||m.battlenet.toLowerCase().includes(q);
+    const rMatch = !roleFilter || m.role===roleFilter;
+    return match && rMatch;
+  });
+  const html = filtered.map((m,i)=>`
+    <tr>
+      <td style="color:var(--text-muted)">${i+1}</td>
+      <td>${m.wechat}</td>
+      <td style="color:var(--text-muted)">${m.battlenet}</td>
+      <td><strong>${m.char||'—'}</strong></td>
+      <td>${m.cls}</td>
+      <td><span class="role-tag ${m.role==='T'?'role-tank':m.role==='N'?'role-heal':'role-dps'}">${getRoleLabel(m.role)}</span></td>
+      <td><span class="badge ${m.status==='在'?'badge-green':m.status==='请假'?'badge-gold':'badge-red'}">${m.status}</span></td>
+      <td class="${m.dkp<0?'dkp-neg':'dkp-val'}">${m.dkp}</td>
+      <td style="color:var(--text-muted);font-size:12px">${m.note||''}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="editMember(${m.id})">编辑</button></td>
+    </tr>`).join('');
+  document.getElementById('members-tbody').innerHTML = html;
+}
+function filterMembers(v){memberFilter=v;renderMembers();}
+function filterRole(v){roleFilter=v;renderMembers();}
+function getRoleLabel(r){
+  return {T:'坦克',N:'治疗',DPS:'输出',会长:'会长',副会长:'副会长',团长:'团长'}[r]||r;
+}
+
+// ========== DKP PAGE ==========
+function renderDkp(){
+  const sorted = [...members].filter(m=>m.dkp!==undefined).sort((a,b)=>b.dkp-a.dkp);
+  const avgDkp = Math.round(sorted.reduce((a,m)=>a+m.dkp,0)/sorted.length);
+  const maxDkp = sorted[0]?.dkp||0;
+  const activeMem = members.filter(m=>m.status==='在').length;
+  document.getElementById('dkp-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">团员总数</div><div class="stat-val">${members.length}</div><div class="stat-sub">活跃 ${activeMem} 人</div></div>
+    <div class="stat-card"><div class="stat-label">平均DKP</div><div class="stat-val">${avgDkp}</div><div class="stat-sub">本赛季</div></div>
+    <div class="stat-card"><div class="stat-label">最高DKP</div><div class="stat-val">${maxDkp}</div><div class="stat-sub">${sorted[0]?.char||sorted[0]?.wechat||''}</div></div>
+    <div class="stat-card"><div class="stat-label">活动次数</div><div class="stat-val">${events.length}</div><div class="stat-sub">本赛季</div></div>
+  `;
+  const html = sorted.map((m,i)=>`
+    <tr>
+      <td style="font-family:'Cinzel',serif;color:${i<3?'var(--gold)':'var(--text-muted)'}">${i+1}</td>
+      <td><strong>${m.char||m.wechat}</strong></td>
+      <td>${m.cls}</td>
+      <td><span class="role-tag ${m.role==='T'?'role-tank':m.role==='N'?'role-heal':'role-dps'}">${getRoleLabel(m.role)}</span></td>
+      <td class="${m.dkp<0?'dkp-neg':'dkp-val'}" style="font-size:16px">${m.dkp}</td>
+      <td style="color:var(--text-muted)">—</td>
+      <td><span class="badge ${m.status==='在'?'badge-green':m.status==='请假'?'badge-gold':'badge-red'}">${m.status}</span></td>
+    </tr>`).join('');
+  document.getElementById('dkp-tbody').innerHTML = html;
+}
+
+// ========== GEAR PAGE ==========
+function renderGearTable(){
+  const html = gearTypes.map(g=>`
+    <tr>
+      <td>${g.name}</td>
+      <td><span class="badge badge-green">英雄</span> <span class="badge" style="color:#0070dd;border-color:rgba(0,112,221,.4)">勇士</span> <span class="badge" style="color:#a335ee;border-color:rgba(163,53,238,.4)">史诗</span></td>
+      <td>
+        <input type="number" value="${g.normal}" style="width:55px;background:var(--bg-card2);border:1px solid var(--border);color:var(--green);padding:3px 6px;border-radius:4px;font-size:12px" onchange="updateGear(${g.id},'normal',this.value)"> /
+        <input type="number" value="${g.hero}" style="width:55px;background:var(--bg-card2);border:1px solid var(--border);color:#0070dd;padding:3px 6px;border-radius:4px;font-size:12px" onchange="updateGear(${g.id},'hero',this.value)"> /
+        <input type="number" value="${g.epic}" style="width:55px;background:var(--bg-card2);border:1px solid var(--border);color:#a335ee;padding:3px 6px;border-radius:4px;font-size:12px" onchange="updateGear(${g.id},'epic',this.value)">
+      </td>
+      <td><button class="btn btn-danger btn-sm" onclick="removeGear(${g.id})">删除</button></td>
+    </tr>`).join('');
+  document.getElementById('gear-table').innerHTML = html;
+}
+function updateGear(id,qual,val){
+  const g = gearTypes.find(x=>x.id===id);
+  if(g) g[qual]=parseInt(val)||0;
+}
+function removeGear(id){gearTypes=gearTypes.filter(g=>g.id!==id);renderGearTable();}
+function addGearType(){
+  gearTypes.push({id:nextId++,name:'新装备类型',hero:60,normal:40,epic:120});
+  renderGearTable();
+}
+function renderGlobalLootLog(){
+  const all = events.flatMap(e=>e.lootLog.map(l=>({...l,eventName:e.name})));
+  all.sort((a,b)=>b.time.localeCompare(a.time));
+  const html = all.slice(0,20).map(l=>{
+    const m = members.find(x=>x.id===l.memberId);
+    return `<div class="loot-entry">
+      <span class="who">${m?m.char||m.wechat:'?'}</span>
+      <span class="item quality-${l.quality}">${l.item}</span>
+      <span class="cost">-${l.dkp}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('global-loot-log').innerHTML = html||'<div style="color:var(--text-muted);padding:12px;text-align:center">暂无记录</div>';
+}
+
+// ========== MODALS ==========
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+function openNewEventModal(){
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('evt-date').value=today;
+  document.getElementById('evt-name').value='';
+  document.getElementById('evt-note').value='';
+  openModal('modal-event');
+}
+function createEvent(){
+  const name=document.getElementById('evt-name').value.trim();
+  const date=document.getElementById('evt-date').value;
+  const time=document.getElementById('evt-time').value;
+  const raid=document.getElementById('evt-raid').value;
+  const note=document.getElementById('evt-note').value;
+  if(!name||!date){toast('请填写活动名称和日期','error');return;}
+  const evt={id:nextId++,name,date,time,raid,note,status:'planned',roster:members.filter(m=>m.status==='在').map(m=>m.id),dkpLog:[],lootLog:[]};
+  events.push(evt);
+  closeModal('modal-event');
+  renderCal();
+  openEvent(evt.id);
+  toast('活动已创建','success');
+}
+
+let currentDkpEventId=null;
+function openDkpModal(evtId){
+  currentDkpEventId=evtId;
+  dkpScope='all';
+  selectedDkpMembers=[];
+  document.getElementById('dkp-scope-all-btn')?.classList.add('active');
+  document.getElementById('dkp-member-sel').style.display='none';
+  document.getElementById('dkp-amount').value=10;
+  document.getElementById('dkp-note').value='';
+  // render picker
+  const evt = events.find(e=>e.id===evtId);
+  const rosterMembers = (evt?evt.roster:[]).map(id=>members.find(m=>m.id===id)).filter(Boolean);
+  document.getElementById('dkp-picker').innerHTML = rosterMembers.map(m=>`
+    <div class="picker-card" id="dpick-${m.id}" onclick="toggleDkpMember(${m.id})">
+      <div class="picker-name">${m.char||m.wechat}</div>
+      <div class="picker-dkp">${m.dkp} DKP</div>
+    </div>`).join('');
+  openModal('modal-dkp');
+}
+function selectPhase(name,amt,el){
+  document.querySelectorAll('.phase-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('dkp-amount').value=amt;
+  document.getElementById('dkp-note').value=name;
+}
+function setScope(scope,el){
+  dkpScope=scope;
+  document.querySelectorAll('#modal-dkp .phase-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('dkp-member-sel').style.display=scope==='selected'?'block':'none';
+}
+function toggleDkpMember(id){
+  const el=document.getElementById(`dpick-${id}`);
+  if(selectedDkpMembers.includes(id)){
+    selectedDkpMembers=selectedDkpMembers.filter(x=>x!==id);
+    el.classList.remove('selected');
+  } else {
+    selectedDkpMembers.push(id);
+    el.classList.add('selected');
+  }
+}
+function confirmDkp(){
+  const amt=parseInt(document.getElementById('dkp-amount').value)||0;
+  const note=document.getElementById('dkp-note').value;
+  const evt=events.find(e=>e.id===currentDkpEventId);
+  if(!evt) return;
+  const targets = dkpScope==='all' ? evt.roster : selectedDkpMembers;
+  targets.forEach(id=>{
+    const m=members.find(x=>x.id===id);
+    if(m) m.dkp+=amt;
+  });
+  evt.dkpLog.push({type:note||'加分',amount:amt,scope:dkpScope,note,time:new Date().toTimeString().slice(0,5)});
+  closeModal('modal-dkp');
+  renderEventDetail(evt);
+  renderMembers();
+  renderDkp();
+  toast(`已为 ${targets.length} 名团员加 ${amt} DKP`,'success');
+}
+
+let currentLootEventId=null;
+function openLootModal(evtId){
+  currentLootEventId=evtId;
+  selectedLootMember=null;
+  // populate item select
+  const sel=document.getElementById('loot-item-select');
+  sel.innerHTML=wowItems.map(i=>`<option>${i}</option>`).join('');
+  // populate picker
+  const evt=events.find(e=>e.id===evtId);
+  const rosterMembers=(evt?evt.roster:[]).map(id=>members.find(m=>m.id===id)).filter(Boolean);
+  document.getElementById('loot-picker').innerHTML=rosterMembers.map(m=>`
+    <div class="picker-card" id="lpick-${m.id}" onclick="selectLootMember(${m.id})">
+      <div class="picker-name">${m.char||m.wechat}</div>
+      <div class="picker-dkp">${m.dkp} DKP</div>
+    </div>`).join('');
+  openModal('modal-loot');
+}
+function selectLootMember(id){
+  if(selectedLootMember!==null) document.getElementById(`lpick-${selectedLootMember}`)?.classList.remove('selected');
+  selectedLootMember=id;
+  document.getElementById(`lpick-${id}`)?.classList.add('selected');
+}
+function confirmLoot(){
+  if(!selectedLootMember){toast('请选择团员','error');return;}
+  const m=members.find(x=>x.id===selectedLootMember);
+  const dkp=parseInt(document.getElementById('loot-dkp').value)||0;
+  const item=document.getElementById('loot-item-select').value;
+  const quality=document.getElementById('loot-quality').value;
+  const evt=events.find(e=>e.id===currentLootEventId);
+  m.dkp-=dkp;
+  evt?.lootLog.push({memberId:selectedLootMember,item,quality,dkp,time:new Date().toTimeString().slice(0,5)});
+  closeModal('modal-loot');
+  if(evt) renderEventDetail(evt);
+  renderMembers();renderDkp();renderGlobalLootLog();
+  toast(`${m.char||m.wechat} 获得 ${item}，扣除 ${dkp} DKP`,'success');
+}
+
+function openMemberModal(id){
+  editingMemberId=id||null;
+  if(id){
+    const m=members.find(x=>x.id===id);
+    document.getElementById('member-modal-title').textContent='编辑团员';
+    document.getElementById('m-wechat').value=m.wechat;
+    document.getElementById('m-battlenet').value=m.battlenet;
+    document.getElementById('m-char').value=m.char;
+    document.getElementById('m-class').value=m.cls;
+    document.getElementById('m-role').value=m.role;
+    document.getElementById('m-status').value=m.status;
+    document.getElementById('m-dkp').value=m.dkp;
+    document.getElementById('m-note').value=m.note;
+  } else {
+    document.getElementById('member-modal-title').textContent='添加团员';
+    ['m-wechat','m-battlenet','m-char','m-note'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('m-dkp').value=0;
+  }
+  openModal('modal-member');
+}
+function editMember(id){openMemberModal(id);}
+function saveMember(){
+  const data={
+    wechat:document.getElementById('m-wechat').value.trim(),
+    battlenet:document.getElementById('m-battlenet').value.trim(),
+    char:document.getElementById('m-char').value.trim(),
+    cls:document.getElementById('m-class').value,
+    role:document.getElementById('m-role').value,
+    status:document.getElementById('m-status').value,
+    dkp:parseInt(document.getElementById('m-dkp').value)||0,
+    note:document.getElementById('m-note').value.trim(),
+  };
+  if(!data.wechat){toast('请填写微信名','error');return;}
+  if(editingMemberId){
+    const m=members.find(x=>x.id===editingMemberId);
+    Object.assign(m,data);
+    toast('团员信息已更新','success');
+  } else {
+    data.id=nextId++;
+    members.push(data);
+    toast('团员已添加','success');
+  }
+  closeModal('modal-member');
+  renderMembers();renderDkp();
+}
+
+// ========== NAVIGATION ==========
+function showPage(p){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.getElementById('nav-'+p).classList.add('active');
+  if(p==='members') renderMembers();
+  if(p==='dkp') renderDkp();
+  if(p==='loot'){renderGearTable();renderGlobalLootLog();}
+}
+
+// ========== TOAST ==========
+function toast(msg,type=''){
+  const wrap=document.getElementById('toast-wrap');
+  const el=document.createElement('div');
+  el.className=`toast ${type}`;
+  el.textContent=msg;
+  wrap.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),300);},3000);
+}
+
+// ========== INIT ==========
+initCal();
+renderMembers();
+renderDkp();
+// show latest event by default
+if(events.length>0) setTimeout(()=>openEvent(events[events.length-1].id),100);
+</script>
+</body>
+</html>
