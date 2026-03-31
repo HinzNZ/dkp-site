@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AUCKLAND TRANSPORT · 公会DKP管理</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -800,7 +801,7 @@ let gearTypes=[
 ];
 let wowItems=['主宰之盔','深渊铸造者之盔','虚空侵扰者面甲','夜之裂变护肩','深海之息护肩','暗影编织者胸甲','星空守护者胸甲','至暗之夜法袍','阴影之翼斗篷','虚空裂变腕甲','星光编织手套','深渊之爪手套','黑暗之心腰带','夜裂腿甲','暗影踏步靴','虚空裂变戒指','至暗信誓戒指','深渊之心项链','主宰力量饰品','星光之眼饰品','黑暗脉动饰品','阴影炮台主炮','虚空裂变巨剑','夜之终结弓','暗影之触法杖','星光匕首','深渊盾牌','阴影之矛','主宰之锤','虚空剑刃双刃'];
 
-let uid=100,curEvt=null;
+let uid=100,curEvt=null,dbLoaded=false;
 let calY,calM,mainY,mainM,weekStart,calView='month';
 let dkpEvtId=null,lootEvtId=null,dkpSc='all',dkpSel=[],lootSel=null;
 let editMemId=null,mF='',rF='';
@@ -1479,6 +1480,7 @@ function doLogin() {
     document.getElementById('user-badge-wrap').innerHTML =
       `<span class="admin-badge" onclick="openMo('mo-chpw')" title="点击修改账号密码">🔐 管理员</span>`;
     toast('管理员登录成功 🎉', 'ok');
+    if (!dbLoaded) { dbLoaded = true; loadAllFromDB(); }
   } else {
     document.getElementById('login-err').textContent = '用户名或密码错误';
   }
@@ -1490,6 +1492,7 @@ function enterViewer() {
   document.getElementById('login-overlay').style.display = 'none';
   document.getElementById('user-badge-wrap').innerHTML =
     `<span class="viewer-badge" onclick="showLogoutMenu()" title="切换账号">👁 只读模式</span>`;
+  if (!dbLoaded) { dbLoaded = true; loadAllFromDB(); }
 }
 
 function showLogoutMenu() {
@@ -1540,29 +1543,53 @@ function requireAdmin(fn) {
 const SB_URL = 'https://nazdjrenlgoyolygxbij.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hemRqcmVubGdveW9seWd4YmlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NDQzMDksImV4cCI6MjA5MDUyMDMwOX0.iMScj50UhBZlvf3nROJ9ocR4_n7VmkbtoWXXyAtVuns';
 
-async function sbFetch(path, method='GET', body=null, prefer='return=representation') {
+async function sbFetch(path, method='GET', body=null, prefer='return=representation', retry=1) {
   const headers = {
     'apikey': SB_KEY,
     'Authorization': 'Bearer ' + SB_KEY,
     'Content-Type': 'application/json',
     'Prefer': prefer,
   };
-  const opts = { method, headers };
+  const opts = { method, headers, mode: 'cors', credentials: 'omit' };
   if (body) opts.body = JSON.stringify(body);
   try {
     const res = await fetch(SB_URL + '/rest/v1/' + path, opts);
     if (!res.ok) {
       const err = await res.text();
-      console.error('SB error', method, path, err);
-      toast('数据库操作失败: ' + err.slice(0,80), 'err');
+      console.error('SB error', method, path, res.status, err);
+      if (res.status === 503 || res.status === 502) {
+        // Supabase might be waking up - show helpful message
+        toast('数据库正在唤醒，请稍后刷新页面…', 'err');
+      } else {
+        toast(`DB错误 ${res.status}: ` + err.slice(0,60), 'err');
+      }
       return null;
     }
     const text = await res.text();
     return text ? JSON.parse(text) : [];
   } catch(e) {
-    console.error('SB fetch exception:', e);
-    toast('网络错误，请检查连接', 'err');
+    if (retry > 0) {
+      // Wait 1.5s and retry once
+      await new Promise(r => setTimeout(r, 1500));
+      return sbFetch(path, method, body, prefer, retry - 1);
+    }
+    console.error('SB fetch failed after retry:', e.message);
     return null;
+  }
+}
+
+// Test connectivity on load
+async function testDBConnection() {
+  try {
+    const r = await fetch(SB_URL + '/rest/v1/members?limit=1', {
+      method: 'GET',
+      mode: 'cors',
+      credentials: 'omit',
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    return r.ok;
+  } catch(e) {
+    return false;
   }
 }
 
@@ -1664,6 +1691,15 @@ function rowToGearType(r) {
 async function loadAllFromDB() {
   showLoadingOverlay('正在连接数据库...');
   try {
+    // Test connection first
+    const connected = await testDBConnection();
+    if (!connected) {
+      hideLoadingOverlay();
+      showDBError();
+      initCal(); renderMembers(); renderDkp();
+      if(typeof renderGear==='function') renderGear();
+      return;
+    }
     // Load members
     const mRows = await db.getMembers();
     if (mRows.length > 0) {
@@ -1695,7 +1731,7 @@ async function loadAllFromDB() {
       // Seed existing events
       showLoadingOverlay('初始化活动数据...');
       for (const ev of events) {
-        const res = await db.upsertEvent(ev);
+        const res = await db.insertEvent(ev);
         if (res) {
           ev.db_id = res.id;
           for (const log of ev.dkpLog) await db.insertDkpLog(ev.db_id, log);
@@ -1721,9 +1757,32 @@ async function loadAllFromDB() {
   } catch(e) {
     console.error('DB load error:', e);
     hideLoadingOverlay();
-    toast('数据库连接失败，使用本地数据', 'err');
+    showDBError();
     initCal();
+    renderMembers(); renderDkp();
+    if(typeof renderGear==='function') renderGear();
   }
+}
+
+function showDBError() {
+  const dot = document.getElementById('db-status');
+  if (dot) { dot.style.background='#d05050'; dot.title='数据库连接失败'; }
+  // Show a dismissible banner
+  const banner = document.createElement('div');
+  banner.id = 'db-banner';
+  banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a0808;border:1px solid rgba(208,80,80,.5);color:#d05050;padding:12px 20px;border-radius:10px;font-size:13px;z-index:8000;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.5)';
+  banner.innerHTML = `
+    <span>⚠️</span>
+    <div>
+      <div style="font-weight:600;margin-bottom:2px">数据库连接失败</div>
+      <div style="font-size:11px;color:rgba(208,80,80,.7)">
+        可能原因：Supabase 项目已暂停（免费版7天不活跃会暂停）<br>
+        请前往 <a href="https://supabase.com/dashboard" target="_blank" style="color:#d05050;text-decoration:underline">supabase.com/dashboard</a> 恢复项目
+      </div>
+    </div>
+    <button onclick="document.getElementById('db-banner').remove()" style="background:none;border:none;color:#d05050;cursor:pointer;font-size:18px;padding:0 4px">×</button>
+  `;
+  document.body.appendChild(banner);
 }
 
 function showLoadingOverlay(msg) {
@@ -1780,7 +1839,9 @@ function updateClsColor(sel) {
   sel.style.fontWeight = '700';
 }
 
-loadAllFromDB();
+// Don't auto-load — wait for user to log in or enter viewer
+// loadAllFromDB() is called inside doLogin() and enterViewer()
+console.log('AT Guild DKP ready. Waiting for login...');
 </script>
 
 <!-- LOGIN OVERLAY -->
