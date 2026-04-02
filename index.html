@@ -777,13 +777,15 @@ body.viewer-mode .admin-only{display:none!important}
   </div>
   <div class="fg" style="margin-bottom:11px">
     <label class="fl">应用对象</label>
-    <div class="pbs">
-      <button class="pb on" id="sc-all" onclick="setSc('all',this)">全体出席团员</button>
-      <button class="pb" id="sc-sel" onclick="setSc('sel',this)">手动选择</button>
+    <div class="pbs" style="margin-bottom:8px">
+      <button class="pb on" id="dkp-grp-all"   onclick="dkpSetGroup('all')">全体</button>
+      <button class="pb"    id="dkp-grp-main"  onclick="dkpSetGroup('main')">仅主力</button>
+      <button class="pb"    id="dkp-grp-sub"   onclick="dkpSetGroup('sub')">仅替补</button>
+      <button class="pb"    id="dkp-grp-custom" onclick="dkpSetGroup('custom')">自定义</button>
     </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px" id="dkp-scope-hint">全选全体团员，可点击单独取消</div>
   </div>
-  <div id="dkp-sel" style="display:none;margin-bottom:11px">
-    <label class="fl" style="margin-bottom:7px;display:block">点击选择团员</label>
+  <div style="margin-bottom:11px">
     <div class="mpk" id="dkp-pk"></div>
   </div>
   <div class="md-footer">
@@ -1129,21 +1131,31 @@ function backToCal(){
 }
 function renderED(id){
   const e=events.find(x=>x.id===id);if(!e)return;
+  if(!e.rosterSubs) e.rosterSubs=[];
   const ms=e.roster.map(i=>members.find(m=>m.id===i)).filter(Boolean);
+  const subs=(e.rosterSubs||[]).map(i=>members.find(m=>m.id===i)).filter(Boolean);
+  const allMs=[...ms,...subs];
   const mgmt=ms.filter(m=>['会长','副会长','团长'].includes(m.role));
   const tanks=ms.filter(m=>m.role==='T');
   const heals=ms.filter(m=>m.role==='N');
   const dps=ms.filter(m=>!['T','N','会长','副会长','团长'].includes(m.role));
-  const rc=m=>`<div class="rcard rt-${m.role==='T'||m.role==='团长'?'t':m.role==='N'?'n':'d'}" style="padding-bottom:32px;border-left:3px solid ${clsColor(m.cls)}">
+  const rc=(m,isSub)=>`<div class="rcard rt-${m.role==='T'||m.role==='团长'?'t':m.role==='N'?'n':'d'}" style="padding-bottom:32px;border-left:3px solid ${clsColor(m.cls)}${isSub?';opacity:0.82':''}">
     <div class="rc-name" style="color:${clsColor(m.cls)};text-shadow:0 0 10px ${clsColor(m.cls)}30">${m.char||m.wx}</div><div class="rc-sub">${clsTag(m.cls)} · ${rl(m.role)}</div>
     <div class="rc-dkp">${m.dkp}</div>
-    <button onclick="removeFromRoster(${id},${m.id})" class="admin-only" style="position:absolute;bottom:8px;right:8px;background:rgba(208,80,80,.15);border:1px solid rgba(208,80,80,.35);color:var(--red);font-size:10px;padding:2px 8px;border-radius:5px;cursor:pointer;font-family:inherit">移除</button>
+    <div class="admin-only" style="position:absolute;bottom:8px;right:8px;display:flex;gap:4px">
+      <button onclick="toggleSubStatus(${id},${m.id})" style="background:rgba(74,159,224,.12);border:1px solid rgba(74,159,224,.3);color:var(--blue);font-size:10px;padding:2px 7px;border-radius:5px;cursor:pointer;font-family:inherit">${isSub?'→主力':'→替补'}</button>
+      <button onclick="removeFromRoster(${id},${m.id})" style="background:rgba(208,80,80,.15);border:1px solid rgba(208,80,80,.35);color:var(--red);font-size:10px;padding:2px 7px;border-radius:5px;cursor:pointer;font-family:inherit">移除</button>
+    </div>
   </div>`;
-  const sect=(label,arr)=>arr.length?`<div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin:12px 0 6px">${label} (${arr.length})</div><div class="rgrid">${arr.map(rc).join('')}</div>`:'';
+  const sect=(label,arr,isSub)=>arr.length?`<div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin:12px 0 6px">${label} (${arr.length})</div><div class="rgrid">${arr.map(m=>rc(m,isSub)).join('')}</div>`:'';
+  const subMgmt=subs.filter(m=>['会长','副会长','团长'].includes(m.role));
+  const subTanks=subs.filter(m=>m.role==='T');
+  const subHeals=subs.filter(m=>m.role==='N');
+  const subDps=subs.filter(m=>!['T','N','会长','副会长','团长'].includes(m.role));
   const dRows=e.dkpLog.map(l=>{
     let who;
     if(l.scope==='all'){
-      who='<span style="color:var(--muted);font-size:11px">全体 ('+e.roster.length+'人)</span>';
+      const totalRoster=(e.roster.length+(e.rosterSubs||[]).length); who='<span style="color:var(--muted);font-size:11px">'+( l.scope==='main'?'主力 ('+e.roster.length+'人)':l.scope==='sub'?'替补 ('+(e.rosterSubs||[]).length+'人)':'全体 ('+totalRoster+'人)')+'</span>';
     } else {
       const names=(l.members||[]).map(mid=>{const mm=members.find(x=>x.id===mid);return mm?mm.char||mm.wx:'?';});
       const coloredNames=(l.members||[]).map(mid=>{const mm=members.find(x=>x.id===mid);return mm?`<span style="color:${clsColor(mm.cls)}">${mm.char||mm.wx}</span>`:'?';});
@@ -1183,7 +1195,7 @@ function renderED(id){
           <span class="badge b-gold">${e.raid}</span>
           <span class="badge ${e.status==='completed'?'b-green':e.status==='active'?'b-blue':'b-muted'}">${{completed:'已完成',active:'进行中',planned:'计划中'}[e.status]}</span>
           <span class="badge b-muted">${e.date} ${e.time}</span>
-          <span class="badge b-muted">${ms.length} 人</span>
+          <span class="badge b-muted">${ms.length} 主力${subs.length>0?" · "+subs.length+" 替补":""}</span>
         </div>
       </div>
       <div class="ed-acts">
@@ -1196,20 +1208,24 @@ function renderED(id){
     <div class="ed-stats">
       <div class="eds"><div class="eds-l">本次加分</div><div class="eds-v" style="color:var(--green)">+${totDkp}</div></div>
       <div class="eds"><div class="eds-l">分配件数</div><div class="eds-v" style="color:var(--blue)">${e.lootLog.length}</div></div>
-      <div class="eds"><div class="eds-l">出席人数</div><div class="eds-v" style="color:var(--gold)">${ms.length}</div></div>
+      <div class="eds"><div class="eds-l">出席人数</div><div class="eds-v" style="color:var(--gold)">${allMs.length}</div></div>
     </div>
   </div>
   <div class="tabs">
-    <button class="tab on" onclick="swTab('roster',this)">出席团员 (${ms.length})</button>
+    <button class="tab on" onclick="swTab('roster',this)">出席团员 (${allMs.length})</button>
     <button class="tab" onclick="swTab('dkplog',this)">DKP记录 (${e.dkpLog.length})</button>
     <button class="tab" onclick="swTab('lootlog',this)">装备记录 (${e.lootLog.length})</button>
   </div>
   <div class="tpanel on" id="tp-roster">
-    <div style="margin-bottom:14px">
-      <button class="btn btn-gold btn-sm admin-only" onclick="openAddRosterMo(${id})">＋ 添加团员到本次活动</button>
+    <div style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-gold btn-sm admin-only" onclick="openAddRosterMo(${id},'main')">＋ 添加主力</button>
+      <button class="btn btn-blue btn-sm admin-only" onclick="openAddRosterMo(${id},'sub')">＋ 添加替补</button>
     </div>
-    ${sect('公会管理',mgmt)}${sect('坦克',tanks)}${sect('治疗',heals)}${sect('输出',dps)}
-    ${ms.length===0?'<div style=\"color:var(--muted);padding:16px;text-align:center\">暂无出席团员</div>':''}
+    ${ms.length>0?'<div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:2px;margin-bottom:8px;padding:6px 10px;background:rgba(201,168,76,.08);border-radius:6px;border-left:3px solid var(--gold)">🗡️ 主力团员 ('+ms.length+')</div>':''}
+    ${sect('公会管理',mgmt,false)}${sect('坦克',tanks,false)}${sect('治疗',heals,false)}${sect('输出',dps,false)}
+    ${ms.length===0?'<div style=\"color:var(--muted);padding:10px 16px;font-size:12px\">暂无主力团员</div>':''}
+    ${subs.length>0?'<div style="font-size:11px;font-weight:700;color:var(--blue);letter-spacing:2px;margin:16px 0 8px;padding:6px 10px;background:rgba(74,159,224,.08);border-radius:6px;border-left:3px solid var(--blue)">🔄 替补团员 ('+subs.length+')</div>':''}
+    ${sect('公会管理',subMgmt,true)}${sect('坦克',subTanks,true)}${sect('治疗',subHeals,true)}${sect('输出',subDps,true)}
   </div>
   <div class="tpanel" id="tp-dkplog">${dRows||'<div style="color:var(--muted);padding:16px;text-align:center">暂无记录</div>'}</div>
   <div class="tpanel" id="tp-lootlog">${lRows||'<div style="color:var(--muted);padding:16px;text-align:center">暂无记录</div>'}</div>`;
@@ -1274,33 +1290,94 @@ function saveEvt(){
   if(raidBase==='__custom__'&&!raidCustom){toast('请填写自定义副本名称','err');return;}
   const raid=raidBase==='__custom__'?raidCustom:`${raidBase}（${raidDiff}）`;
   const ev={id:uid++,name,date,time:gv('e-time'),raid,note:gv('e-note'),status:'planned',
-    roster:members.filter(m=>m.st==='在').map(m=>m.id),dkpLog:[],lootLog:[]};
+    roster:members.filter(m=>m.st==='在').map(m=>m.id),rosterSubs:[],dkpLog:[],lootLog:[]};
   events.push(ev);
   // Save to DB
   db.insertEvent(ev); // sets ev.db_id on success
   closeMo('mo-evt');renderAll();openEvtDetail(ev.id);toast('活动已创建','ok');
 }
 
+// dkpSel = currently checked member IDs in the picker
+// dkpGroup = 'all'|'main'|'sub'|'custom'
+let dkpGroup = 'all';
+
 function openDkpMo(id){
-  dkpEvtId=id;dkpSc='all';dkpSel=[];
-  sv('dkp-amt',10);sv('dkp-note','');
-  document.getElementById('dkp-sel').style.display='none';
-  document.getElementById('sc-all').classList.add('on');document.getElementById('sc-sel').classList.remove('on');
-  document.querySelectorAll('#mo-dkp .pb').forEach(b=>b.classList.remove('on'));
+  dkpEvtId=id; dkpGroup='all'; dkpSel=[];
+  sv('dkp-amt',10); sv('dkp-note','');
+  document.querySelectorAll('#mo-dkp .pbs .pb').forEach(b=>b.classList.remove('on'));
   const e=events.find(x=>x.id===id);
-  const ms=(e?e.roster:[]).map(i=>members.find(m=>m.id===i)).filter(Boolean);
-  document.getElementById('dkp-pk').innerHTML=ms.map(m=>`<div class="pcard" id="dp-${m.id}" onclick="togDkp(${m.id})"><div class="pc-n" style="color:${clsColor(m.cls)};font-weight:600">${m.char||m.wx}</div><div class="pc-d" style="color:${clsColor(m.cls)}66;font-size:10px">${m.cls} · ${m.dkp} DKP</div></div>`).join('');
+  if(!e.rosterSubs) e.rosterSubs=[];
+  // Pre-select all (main + subs)
+  const allIds=[...e.roster,...e.rosterSubs];
+  dkpSel=[...allIds];
+  renderDkpPicker(e);
+  dkpSetGroup('all');
   openMo('mo-dkp');
 }
-function pickPhase(name,amt,el){document.querySelectorAll('#mo-dkp .pbs .pb').forEach(b=>b.classList.remove('on'));el.classList.add('on');sv('dkp-amt',amt);sv('dkp-note',name);}
-function setSc(s,el){dkpSc=s;document.getElementById('sc-all').classList.toggle('on',s==='all');document.getElementById('sc-sel').classList.toggle('on',s==='sel');document.getElementById('dkp-sel').style.display=s==='sel'?'block':'none';}
-function togDkp(id){const el=document.getElementById(`dp-${id}`);if(dkpSel.includes(id)){dkpSel=dkpSel.filter(x=>x!==id);el.classList.remove('on');}else{dkpSel.push(id);el.classList.add('on');}}
+
+function renderDkpPicker(e){
+  if(!e) e=events.find(x=>x.id===dkpEvtId);
+  if(!e) return;
+  if(!e.rosterSubs) e.rosterSubs=[];
+  const mainIds=e.roster;
+  const subIds=e.rosterSubs;
+  const allIds=[...mainIds,...subIds];
+  // Build sections: main group then sub group
+  const buildCards=(ids, label, color)=>{
+    if(!ids.length) return '';
+    const cards=ids.map(i=>{
+      const m=members.find(x=>x.id===i); if(!m) return '';
+      const checked=dkpSel.includes(i);
+      return `<div class="pcard${checked?' on':''}" id="dp-${m.id}" onclick="togDkp(${m.id})">
+        <div class="pc-n" style="color:${clsColor(m.cls)};font-weight:600">${m.char||m.wx}</div>
+        <div class="pc-d" style="color:${clsColor(m.cls)}66;font-size:10px">${m.cls} · ${m.dkp} DKP</div>
+      </div>`;
+    }).join('');
+    return `<div style="font-size:10px;color:${color};letter-spacing:1px;margin:8px 0 5px;font-weight:700">${label} (${ids.length})</div><div class="mpk" style="max-height:none">${cards}</div>`;
+  };
+  let html='';
+  if(mainIds.length) html+=buildCards(mainIds,'🗡️ 主力','var(--gold)');
+  if(subIds.length) html+=buildCards(subIds,'🔄 替补','var(--blue)');
+  if(!allIds.length) html='<div style="color:var(--muted);padding:10px;text-align:center;font-size:12px">暂无出席团员</div>';
+  document.getElementById('dkp-pk').innerHTML=html;
+}
+
+function dkpSetGroup(group){
+  dkpGroup=group;
+  ['all','main','sub','custom'].forEach(g=>{
+    document.getElementById('dkp-grp-'+g)?.classList.toggle('on', g===group);
+  });
+  const e=events.find(x=>x.id===dkpEvtId);
+  if(!e) return;
+  if(!e.rosterSubs) e.rosterSubs=[];
+  const hints={all:'全选全体团员，可点击单独取消',main:'仅选主力团员，可点击单独调整',sub:'仅选替补团员，可点击单独调整',custom:'自定义选择，点击勾选/取消'};
+  document.getElementById('dkp-scope-hint').textContent=hints[group]||'';
+  if(group==='all')    { dkpSel=[...e.roster,...e.rosterSubs]; }
+  else if(group==='main') { dkpSel=[...e.roster]; }
+  else if(group==='sub')  { dkpSel=[...e.rosterSubs]; }
+  else if(group==='custom') { dkpSel=[]; }
+  renderDkpPicker(e);
+}
+
+function pickPhase(name,amt,el){
+  document.querySelectorAll('#mo-dkp .pbs .pb').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  sv('dkp-amt',amt);sv('dkp-note',name);
+  // Re-highlight the group button that's active
+  document.getElementById('dkp-grp-'+dkpGroup)?.classList.add('on');
+}
+function togDkp(id){
+  const el=document.getElementById(`dp-${id}`);
+  if(dkpSel.includes(id)){dkpSel=dkpSel.filter(x=>x!==id);el.classList.remove('on');}
+  else{dkpSel.push(id);el.classList.add('on');}
+  // If manually changed, switch to custom mode label (but keep group for group filters)
+}
 function confirmDkp(){
   const amt=parseInt(gv('dkp-amt'))||0,note=gv('dkp-note');
   const e=events.find(x=>x.id===dkpEvtId);if(!e)return;
-  const tgts=dkpSc==='all'?e.roster:dkpSel;
+  const tgts=dkpSel;
   tgts.forEach(id=>{const m=members.find(x=>x.id===id);if(m){m.dkp+=amt;if(m.db_id)db.updateMemberDkp(m.db_id,m.dkp);}});
-  const dlog={type:note||'加分',amount:amt,scope:dkpSc,members:dkpSc==='sel'?[...dkpSel]:[],note,time:nowT()};
+  const dlog={type:note||'加分',amount:amt,scope:dkpGroup,members:[...dkpSel],note,time:nowT()};
   e.dkpLog.push(dlog);
   if(e.db_id) db.insertDkpLog(e.db_id, dlog);
   // Log each member's DKP change
@@ -1348,7 +1425,9 @@ function openLootMo(id){
   lootSelGearType=null; lootSelQual='normal'; lootTypeSel=null;
   // Build member lists for both modes
   const e=events.find(x=>x.id===id);
-  const ms=(e?e.roster:[]).map(i=>members.find(m=>m.id===i)).filter(Boolean);
+  if(e && !e.rosterSubs) e.rosterSubs=[];
+  const allRosterIds=[...(e?e.roster:[]),...(e?e.rosterSubs:[])];
+  const ms=allRosterIds.map(i=>members.find(m=>m.id===i)).filter(Boolean);
   const memberCards = ms.map(m=>`<div class="pcard" id="lp-${m.id}" onclick="selLoot(${m.id})"><div class="pc-n" style="color:${clsColor(m.cls)};font-weight:600">${m.char||m.wx}</div><div class="pc-d" style="color:${clsColor(m.cls)}66;font-size:10px">${m.cls} · ${m.dkp} DKP</div></div>`).join('');
   document.getElementById('l-pk').innerHTML = memberCards;
   document.getElementById('l-pk-type').innerHTML = memberCards.replace(/onclick="selLoot\((\d+)\)"/g, 'onclick="selLootType($1)"').replace(/id="lp-/g,'id="lpt-');
@@ -2491,11 +2570,16 @@ function nowT(){return new Date().toTimeString().slice(0,5);}
 let addRosterEvtId = null;
 let addRosterSelected = [];
 
-function openAddRosterMo(evtId) {
+let addRosterGroup = 'main'; // 'main' | 'sub'
+function openAddRosterMo(evtId, group) {
   addRosterEvtId = evtId;
+  addRosterGroup = group || 'main';
   addRosterSelected = [];
   renderAddRosterPicker('');
   document.getElementById('ar-search').value = '';
+  // Update modal title to show group
+  const titleEl = document.querySelector('#mo-add-roster .md-title');
+  if(titleEl) titleEl.textContent = group==='sub' ? '➕ 添加替补团员' : '➕ 添加主力团员';
   openMo('mo-add-roster');
 }
 
@@ -2506,19 +2590,23 @@ function filterAddRoster(q) {
 function renderAddRosterPicker(q) {
   const e = events.find(x => x.id === addRosterEvtId);
   if (!e) return;
+  if(!e.rosterSubs) e.rosterSubs=[];
   const query = q.toLowerCase();
   const filtered = members.filter(m =>
     !query || m.wx.toLowerCase().includes(query) || m.char.toLowerCase().includes(query) || m.bn.toLowerCase().includes(query)
   );
   document.getElementById('ar-picker').innerHTML = filtered.map(m => {
-    const inRoster = e.roster.includes(m.id);
+    const inMain = e.roster.includes(m.id);
+    const inSub = e.rosterSubs.includes(m.id);
+    const inRoster = inMain || inSub;
+    const statusLabel = inMain ? ' · 主力' : inSub ? ' · 替补' : '';
     const selected = addRosterSelected.includes(m.id);
     return `<div class="pcard${selected ? ' on' : ''}" 
       style="${inRoster ? 'opacity:.4;cursor:default;' : ''}"
       onclick="${inRoster ? '' : 'toggleAddRoster(' + m.id + ')'}"
       id="ar-${m.id}">
       <div class="pc-n" style="color:${clsColor(m.cls)};font-weight:600">${m.char || m.wx}</div>
-      <div class="pc-d" style="color:${inRoster ? 'var(--green)' : clsColor(m.cls)+'99'};font-size:10px">${m.cls}${inRoster ? ' · 已在活动中' : ' · ' + m.dkp + ' DKP'}</div>
+      <div class="pc-d" style="color:${inRoster ? 'var(--green)' : clsColor(m.cls)+'99'};font-size:10px">${m.cls}${inRoster ? statusLabel : ' · ' + m.dkp + ' DKP'}</div>
     </div>`;
   }).join('');
 }
@@ -2537,11 +2625,17 @@ function toggleAddRoster(id) {
 function confirmAddRoster() {
   if (!addRosterSelected.length) { toast('请选择至少一名团员', 'err'); return; }
   const e = events.find(x => x.id === addRosterEvtId);
-  addRosterSelected.forEach(id => { if (!e.roster.includes(id)) e.roster.push(id); });
-  if(e.db_id) db.updateEventRoster(e.db_id, e.roster);
+  if(!e.rosterSubs) e.rosterSubs=[];
+  if (addRosterGroup === 'sub') {
+    addRosterSelected.forEach(id => { if (!e.rosterSubs.includes(id) && !e.roster.includes(id)) e.rosterSubs.push(id); });
+  } else {
+    addRosterSelected.forEach(id => { if (!e.roster.includes(id) && !e.rosterSubs.includes(id)) e.roster.push(id); });
+  }
+  if(e.db_id) db.updateEventRoster(e.db_id, e.roster, e.rosterSubs);
   closeMo('mo-add-roster');
   renderED(addRosterEvtId);
-  toast(`已添加 ${addRosterSelected.length} 名团员`, 'ok');
+  const groupLabel = addRosterGroup==='sub'?'替补':'主力';
+  toast(`已添加 ${addRosterSelected.length} 名${groupLabel}团员`, 'ok');
   addRosterSelected = [];
 }
 
@@ -2551,9 +2645,32 @@ function removeFromRoster(evtId, memberId) {
   if (!e || !m) return;
   if (!confirm(`确定将「${m.char || m.wx}」从本次活动移除？`)) return;
   e.roster = e.roster.filter(id => id !== memberId);
-  if(e.db_id) db.updateEventRoster(e.db_id, e.roster);
+  if(!e.rosterSubs) e.rosterSubs=[];
+  e.rosterSubs = e.rosterSubs.filter(id => id !== memberId);
+  if(e.db_id) db.updateEventRoster(e.db_id, e.roster, e.rosterSubs);
   renderED(evtId);
   toast(`已移除 ${m.char || m.wx}`, 'ok');
+}
+
+function toggleSubStatus(evtId, memberId) {
+  const e = events.find(x => x.id === evtId);
+  const m = members.find(x => x.id === memberId);
+  if (!e || !m) return;
+  if(!e.rosterSubs) e.rosterSubs=[];
+  const isSub = e.rosterSubs.includes(memberId);
+  if (isSub) {
+    // Move sub → main
+    e.rosterSubs = e.rosterSubs.filter(id => id !== memberId);
+    if (!e.roster.includes(memberId)) e.roster.push(memberId);
+    toast(`${m.char||m.wx} 已调为主力`, 'ok');
+  } else {
+    // Move main → sub
+    e.roster = e.roster.filter(id => id !== memberId);
+    if (!e.rosterSubs.includes(memberId)) e.rosterSubs.push(memberId);
+    toast(`${m.char||m.wx} 已调为替补`, 'ok');
+  }
+  if(e.db_id) db.updateEventRoster(e.db_id, e.roster, e.rosterSubs);
+  renderED(evtId);
 }
 
 
@@ -2720,7 +2837,8 @@ const db = {
     return await sbFetch('events?select=*&order=date.desc,created_at.desc') || [];
   },
   async insertEvent(ev) {
-    const row = { name: ev.name, date: ev.date, time: ev.time||'20:00', raid: ev.raid||'', note: ev.note||'', status: ev.status||'planned', roster: ev.roster||[] };
+    const rosterData = { m: ev.roster||[], s: ev.rosterSubs||[] };
+    const row = { name: ev.name, date: ev.date, time: ev.time||'20:00', raid: ev.raid||'', note: ev.note||'', status: ev.status||'planned', roster: rosterData };
     const res = await sbFetch('events', 'POST', row, 'return=representation');
     if (res && res[0]) { ev.db_id = res[0].id; return res[0]; }
     return null;
@@ -2728,8 +2846,9 @@ const db = {
   async updateEventStatus(dbId, status) {
     return await sbFetch(`events?id=eq.${dbId}`, 'PATCH', { status }, 'return=minimal');
   },
-  async updateEventRoster(dbId, roster) {
-    return await sbFetch(`events?id=eq.${dbId}`, 'PATCH', { roster }, 'return=minimal');
+  async updateEventRoster(dbId, roster, rosterSubs) {
+    const rosterData = { m: roster||[], s: rosterSubs||[] };
+    return await sbFetch(`events?id=eq.${dbId}`, 'PATCH', { roster: rosterData }, 'return=minimal');
   },
 
   // ── DKP Logs ──
@@ -2813,7 +2932,11 @@ function rowToMember(r) {
   return { id: r.id, db_id: r.id, wx: r.wx||'', bn: r.bn||'', char: r.char_name||'', cls: r.cls||'', role: r.role||'DPS', st: r.status||'在', dkp: r.dkp||0, note: r.note||'' };
 }
 function rowToEvent(r) {
-  return { id: r.id, db_id: r.id, name: r.name, date: r.date, time: r.time||'20:00', raid: r.raid||'', note: r.note||'', status: r.status||'planned', roster: r.roster||[], dkpLog:[], lootLog:[] };
+  let roster = [], rosterSubs = [];
+  const raw = r.roster;
+  if (Array.isArray(raw)) { roster = raw; }
+  else if (raw && typeof raw === 'object') { roster = raw.m || []; rosterSubs = raw.s || []; }
+  return { id: r.id, db_id: r.id, name: r.name, date: r.date, time: r.time||'20:00', raid: r.raid||'', note: r.note||'', status: r.status||'planned', roster, rosterSubs, dkpLog:[], lootLog:[] };
 }
 function rowToDkpLog(r) {
   return { type: r.type, amount: r.amount, scope: r.scope, members: r.members||[], note: r.note||'', time: r.log_time||'' };
