@@ -364,6 +364,72 @@ body.light-mode .cal-sidebar { background:rgba(232,218,188,.5); border-color:rgb
 body.light-mode .cal-top { border-color:rgba(100,72,22,.15); }
 /* Quick links */
 body.light-mode .gc[onclick] { background:var(--lbg-card); }
+
+/* ══ SPREADSHEET / INLINE EDIT TABLE ══ */
+.sp-table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+.sp-table th{
+  background:var(--bg-card2);color:var(--gold);font-size:10px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;font-family:'Cinzel',serif;
+  padding:8px 10px;border:1px solid var(--border);white-space:nowrap;
+  position:sticky;top:0;z-index:10;user-select:none;cursor:default;
+}
+.sp-table th.sortable{cursor:pointer}
+.sp-table th.sortable:hover{color:var(--gold-light);background:var(--bg-card3)}
+.sp-table tr.sp-row{transition:background .1s}
+.sp-table tr.sp-row:hover{background:rgba(201,168,76,.04)}
+.sp-table tr.sp-row.selected{background:rgba(74,159,224,.08)!important;outline:1px solid rgba(74,159,224,.3)}
+.sp-table td{
+  border:1px solid var(--border);padding:0;
+  position:relative;vertical-align:middle;
+}
+.sp-table td.cell-active{outline:2px solid var(--blue)!important;outline-offset:-1px;z-index:5}
+/* Cell inner — read mode */
+.cell-view{
+  padding:6px 10px;min-height:34px;display:flex;align-items:center;
+  cursor:cell;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+/* Cell inputs — edit mode */
+.cell-input{
+  width:100%;height:34px;padding:5px 8px;
+  background:var(--bg-card3);border:none;outline:none;
+  color:var(--text);font-family:'Noto Sans SC',sans-serif;font-size:13px;
+  box-sizing:border-box;
+}
+.cell-select{
+  width:100%;height:34px;padding:4px 6px;
+  background:var(--bg-card3);border:none;outline:none;
+  color:var(--text);font-family:'Noto Sans SC',sans-serif;font-size:13px;
+  box-sizing:border-box;cursor:pointer;
+}
+/* Row number column */
+.sp-rn{
+  width:36px;min-width:36px;max-width:36px;
+  color:var(--muted);font-size:11px;text-align:center;
+  background:var(--bg-card2)!important;cursor:pointer;user-select:none;
+}
+.sp-rn:hover{background:rgba(201,168,76,.08)!important}
+.sp-row.selected .sp-rn{background:rgba(74,159,224,.15)!important;color:var(--blue)}
+/* Toolbar */
+.sp-toolbar{
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  padding:8px 12px;background:var(--bg-card2);
+  border:1px solid var(--border);border-bottom:none;
+  border-radius:10px 10px 0 0;
+}
+.sp-toolbar .sp-info{font-size:11px;color:var(--muted);margin-left:auto}
+.sp-wrap{border:1px solid var(--border);border-radius:0 0 10px 10px;overflow:auto;max-height:calc(100vh - 280px)}
+/* Fill handle drag indicator */
+.sp-fill-hint{font-size:11px;color:var(--muted);padding:2px 8px;
+  background:var(--bg-card2);border:1px solid var(--border);
+  border-radius:4px;pointer-events:none}
+/* Light mode overrides */
+body.light-mode .sp-table th{background:rgba(100,72,22,.08);border-color:rgba(100,72,22,.15)}
+body.light-mode .sp-table td{border-color:rgba(100,72,22,.1)}
+body.light-mode .sp-table tr.sp-row:hover{background:rgba(100,72,22,.03)}
+body.light-mode .sp-table tr.sp-row.selected{background:rgba(26,96,160,.06)!important}
+body.light-mode .cell-input,body.light-mode .cell-select{background:rgba(255,255,255,.9);color:var(--ltext)}
+body.light-mode .sp-toolbar{background:rgba(100,72,22,.05);border-color:rgba(100,72,22,.15)}
+body.light-mode .sp-rn{background:rgba(100,72,22,.05)!important}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(201,168,76,.22);border-radius:3px}
@@ -460,18 +526,45 @@ body.viewer-mode .admin-only{display:none!important}
 
 <!-- MEMBERS PAGE -->
 <div class="pg" id="pg-members">
-  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
-    <div class="stitle" style="margin:0;flex:none">团员管理</div>
-    <input class="fi" style="max-width:210px;margin-left:auto" placeholder="搜索团员…" oninput="filterM(this.value)">
-    <select class="fs" style="max-width:120px" onchange="filterR(this.value)">
-      <option value="">全部职责</option><option value="T">坦克</option><option value="N">治疗</option><option value="DPS">输出</option>
+  <!-- Toolbar -->
+  <div class="sp-toolbar">
+    <div class="stitle" style="margin:0;flex:none;font-size:10px">团员管理</div>
+    <input class="fi" id="m-search" style="max-width:180px;height:30px;padding:4px 10px;font-size:12px" placeholder="🔍 搜索…" oninput="filterM(this.value)">
+    <select class="fs" id="m-role-filter" style="max-width:100px;height:30px;font-size:12px" onchange="filterR(this.value)">
+      <option value="">全部职责</option><option value="T">坦克</option><option value="N">治疗</option><option value="DPS">输出</option><option value="会长">会长</option><option value="副会长">副会长</option><option value="团长">团长</option>
     </select>
-    <button class="btn btn-gold btn-sm admin-only" onclick="openMemMo()">＋ 添加团员</button>
+    <div style="width:1px;height:20px;background:var(--border)"></div>
+    <!-- Batch ops -->
+    <button class="btn btn-outline btn-sm admin-only" onclick="spFillDown()" title="将选中列的第一个值填充到所选行" style="height:28px;padding:0 10px">⬇ 向下填充</button>
+    <button class="btn btn-outline btn-sm admin-only" onclick="spDeleteRows()" title="删除选中行" style="height:28px;padding:0 10px;color:var(--red)">🗑 删除选中</button>
+    <button class="btn btn-gold btn-sm admin-only" onclick="spAddRow()" style="height:28px;padding:0 12px">＋ 添加团员</button>
+    <div class="sp-info" id="sp-sel-info">共 <b id="sp-total">0</b> 人</div>
   </div>
-  <div class="tb-wrap"><table>
-    <thead><tr><th>#</th><th>微信名</th><th>战网ID</th><th>角色名</th><th>职业</th><th>职责</th><th>状态</th><th>当前DKP</th><th>备注</th><th>操作</th></tr></thead>
-    <tbody id="m-tbody"></tbody>
-  </table></div>
+  <div class="sp-wrap">
+    <table class="sp-table" id="sp-members">
+      <thead><tr>
+        <th class="sp-rn" title="点击选择行">#</th>
+        <th style="width:100px" class="sortable" onclick="spSort('wx')">微信名 <span id="sort-wx"></span></th>
+        <th style="width:130px" class="sortable" onclick="spSort('bn')">战网ID <span id="sort-bn"></span></th>
+        <th style="width:100px" class="sortable" onclick="spSort('char')">角色名 <span id="sort-char"></span></th>
+        <th style="width:90px" class="sortable" onclick="spSort('cls')">职业 <span id="sort-cls"></span></th>
+        <th style="width:70px" class="sortable" onclick="spSort('role')">职责 <span id="sort-role"></span></th>
+        <th style="width:70px" class="sortable" onclick="spSort('st')">状态 <span id="sort-st"></span></th>
+        <th style="width:70px" class="sortable" onclick="spSort('dkp')">DKP <span id="sort-dkp"></span></th>
+        <th style="width:140px">备注</th>
+      </tr></thead>
+      <tbody id="m-tbody"></tbody>
+    </table>
+  </div>
+  <!-- Keyboard hint -->
+  <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--muted);flex-wrap:wrap">
+    <span>↑↓← →  导航</span>
+    <span>Enter / 双击  编辑</span>
+    <span>Esc  取消</span>
+    <span>Tab  下一格</span>
+    <span class="admin-only">Ctrl+Z  撤销</span>
+    <span class="admin-only">点击行号  选行 · Shift+点击  多选</span>
+  </div>
 </div>
 
 <!-- DKP PAGE -->
@@ -1529,21 +1622,293 @@ function saveMem(){
 }
 
 // ══ MEMBERS ══
-function renderMembers(){
-  document.getElementById('m-tbody').innerHTML=members.filter(m=>{
-    const q=mF.toLowerCase();
-    return(!q||m.wx.toLowerCase().includes(q)||m.char.toLowerCase().includes(q)||m.bn.toLowerCase().includes(q))&&(!rF||m.role===rF);
-  }).map((m,i)=>`<tr>
-    <td style="color:var(--muted)">${i+1}</td><td>${m.wx}</td>
-    <td style="color:var(--muted);font-size:12px">${m.bn||'—'}</td>
-    <td>${charTag(m.char||'—', m.cls)}</td><td>${clsTag(m.cls)}</td>
-    <td><span class="rtag rt-${m.role==='T'?'t2':m.role==='N'?'n2':'d2'}">${rl(m.role)}</span></td>
-    <td><span class="badge ${m.st==='在'?'b-green':m.st==='请假'?'b-gold':'b-red'}">${m.st}</span></td>
-    <td class="${m.dkp<0?'dv-':'dv'}">${m.dkp}</td>
-    <td style="color:var(--muted);font-size:12px">${m.note||''}</td>
-    <td class="admin-only"><button class="btn btn-outline btn-sm" onclick="openMemMo(${m.id})">编辑</button></td>
-  </tr>`).join('');
+// ══ SPREADSHEET STATE ══
+let spSel = new Set();       // selected row ids
+let spActive = null;         // {id, field} active cell
+let spEditMode = false;
+let spSortField = null, spSortDir = 1;
+let spLastClick = null;      // for shift-select
+let spUndoStack = [];        // undo history
+
+// Column definitions
+const SP_COLS = [
+  {field:'wx',   label:'微信名', type:'text',   width:100},
+  {field:'bn',   label:'战网ID', type:'text',   width:130},
+  {field:'char', label:'角色名', type:'text',   width:100},
+  {field:'cls',  label:'职业',   type:'select', width:90,
+    opts:['法师','猎人','术士','战士','圣骑士','死亡骑士','恶魔猎手','德鲁伊','萨满','武僧','盗贼','牧师','唤魔师']},
+  {field:'role', label:'职责',   type:'select', width:70,
+    opts:['T','N','DPS','会长','副会长','团长'],
+    labels:{T:'坦克',N:'治疗',DPS:'输出',会长:'会长',副会长:'副会长',团长:'团长'}},
+  {field:'st',   label:'状态',   type:'select', width:70,
+    opts:['在','请假','长期请假','缺席']},
+  {field:'dkp',  label:'DKP',    type:'number', width:70},
+  {field:'note', label:'备注',   type:'text',   width:140},
+];
+
+function spFiltered() {
+  const q = mF.toLowerCase();
+  let list = members.filter(m =>
+    (!q || m.wx.toLowerCase().includes(q) || (m.char||'').toLowerCase().includes(q) || (m.bn||'').toLowerCase().includes(q)) &&
+    (!rF || m.role === rF)
+  );
+  if(spSortField) {
+    list = [...list].sort((a,b) => {
+      let av = a[spSortField]??'', bv = b[spSortField]??'';
+      if(spSortField==='dkp') return (bv-av)*spSortDir;
+      return String(av).localeCompare(String(bv))*spSortDir;
+    });
+  }
+  return list;
 }
+
+function renderMembers() {
+  const list = spFiltered();
+  document.getElementById('sp-total').textContent = members.length;
+  const admin = typeof isAdmin !== 'undefined' && isAdmin;
+  document.getElementById('m-tbody').innerHTML = list.map((m, i) => {
+    const isSel = spSel.has(m.id);
+    return `<tr class="sp-row${isSel?' selected':''}" data-id="${m.id}" ondblclick="spActivateCell(this,null,true)">
+      <td class="sp-rn" onclick="spRowClick(event,${m.id})">${i+1}</td>
+      ${SP_COLS.map(col => spRenderCell(m, col, admin)).join('')}
+    </tr>`;
+  }).join('');
+  // Attach keyboard nav
+  document.getElementById('m-tbody').onkeydown = spKeyDown;
+  updateSpSelInfo();
+}
+
+function spRenderCell(m, col, admin) {
+  const isActive = spActive?.id===m.id && spActive?.field===col.field;
+  const val = m[col.field] ?? '';
+  if(isActive && admin) return spEditCell(m, col);
+  // Read view
+  let display;
+  if(col.field==='cls')  display = `<span style="color:${clsColor(m.cls)};font-weight:700">${val}</span>`;
+  else if(col.field==='char') display = charTag(val||'—', m.cls);
+  else if(col.field==='role') display = `<span class="rtag rt-${m.role==='T'?'t2':m.role==='N'?'n2':'d2'}">${rl(m.role)}</span>`;
+  else if(col.field==='st')   display = `<span class="badge ${m.st==='在'?'b-green':m.st==='请假'?'b-gold':'b-red'}">${val}</span>`;
+  else if(col.field==='dkp')  display = `<span class="${m.dkp<0?'dv-':'dv'}" style="font-weight:600">${val}</span>`;
+  else display = `<span style="color:var(--muted)">${val||''}</span>`;
+  return `<td class="${isActive?'cell-active':''}"
+    onclick="${admin?`spClick(event,${m.id},'${col.field}')`:''}"
+    style="width:${col.width}px">
+    <div class="cell-view" style="width:${col.width}px">${display}</div>
+  </td>`;
+}
+
+function spEditCell(m, col) {
+  const val = m[col.field] ?? '';
+  if(col.type==='select') {
+    const opts = col.opts.map(o =>
+      `<option value="${o}" ${o===val?'selected':''}>${col.labels?.[o]||o}</option>`
+    ).join('');
+    return `<td class="cell-active" style="width:${col.width}px">
+      <select class="cell-select" id="sp-input" onchange="spCommit(${m.id},'${col.field}',this.value)"
+        onblur="spCommit(${m.id},'${col.field}',this.value)" onkeydown="spInputKey(event,${m.id},'${col.field}')">
+        ${opts}
+      </select></td>`;
+  }
+  return `<td class="cell-active" style="width:${col.width}px">
+    <input class="cell-input" id="sp-input" type="${col.type==='number'?'number':'text'}"
+      value="${String(val).replace(/"/g,'&quot;')}"
+      onblur="spCommit(${m.id},'${col.field}',this.value)"
+      onkeydown="spInputKey(event,${m.id},'${col.field}')">
+    </td>`;
+}
+
+function spClick(e, id, field) {
+  e.stopPropagation();
+  if(spActive?.id===id && spActive?.field===field) return; // already active
+  spCommitCurrent();
+  spActive = {id, field};
+  spEditMode = false;
+  renderMembers();
+  setTimeout(()=>{
+    const inp = document.getElementById('sp-input');
+    if(inp) { inp.focus(); if(inp.select) inp.select(); }
+  }, 20);
+}
+
+function spActivateCell(tr, field, fromDbl) {
+  const id = parseInt(tr.dataset.id);
+  if(!field) field = spActive?.field || SP_COLS[0].field;
+  spCommitCurrent();
+  spActive = {id, field};
+  spEditMode = fromDbl;
+  renderMembers();
+  setTimeout(()=>{
+    const inp = document.getElementById('sp-input');
+    if(inp) { inp.focus(); if(inp.select) inp.select(); }
+  }, 20);
+}
+
+function spCommit(id, field, rawVal) {
+  const m = members.find(x=>x.id===id);
+  if(!m) return;
+  let val = rawVal;
+  if(field==='dkp') val = parseInt(rawVal)||0;
+  if(m[field] === val) { spActive=null; renderMembers(); return; }
+  // Push undo
+  spUndoStack.push({id, field, oldVal: m[field]});
+  if(spUndoStack.length > 50) spUndoStack.shift();
+  m[field] = val;
+  // DB save with debounce
+  clearTimeout(m._saveTimer);
+  m._saveTimer = setTimeout(()=>{ db.upsertMember(m); renderDkp(); }, 600);
+  spActive = null;
+  renderMembers();
+}
+
+function spCommitCurrent() {
+  if(!spActive) return;
+  const inp = document.getElementById('sp-input');
+  if(inp) spCommit(spActive.id, spActive.field, inp.value);
+}
+
+function spInputKey(e, id, field) {
+  const colIdx = SP_COLS.findIndex(c=>c.field===field);
+  const list = spFiltered();
+  const rowIdx = list.findIndex(m=>m.id===id);
+  if(e.key==='Enter' || e.key==='Tab') {
+    e.preventDefault();
+    spCommit(id, field, e.target.value);
+    // Move: Tab→right, Enter→down
+    if(e.key==='Tab' && !e.shiftKey) {
+      const nextCol = SP_COLS[colIdx+1];
+      if(nextCol) { spActive={id,field:nextCol.field}; renderMembers(); setTimeout(()=>{const i=document.getElementById('sp-input');if(i){i.focus();i.select&&i.select();}},20); }
+    } else if(e.key==='Enter' || (e.key==='Tab' && e.shiftKey)) {
+      const nextRow = list[e.shiftKey && e.key==='Tab' ? rowIdx-1 : rowIdx+1];
+      if(nextRow) { spActive={id:nextRow.id,field}; renderMembers(); setTimeout(()=>{const i=document.getElementById('sp-input');if(i){i.focus();i.select&&i.select();}},20); }
+    }
+  } else if(e.key==='Escape') {
+    spActive=null; renderMembers();
+  }
+}
+
+function spKeyDown(e) {
+  if(!spActive) return;
+  const inp = document.getElementById('sp-input');
+  if(inp) return; // typing in input, let spInputKey handle
+  const list = spFiltered();
+  const rowIdx = list.findIndex(m=>m.id===spActive.id);
+  const colIdx = SP_COLS.findIndex(c=>c.field===spActive.field);
+  if(e.key==='ArrowDown' && rowIdx<list.length-1) { spActive.id=list[rowIdx+1].id; e.preventDefault(); renderMembers(); }
+  else if(e.key==='ArrowUp' && rowIdx>0) { spActive.id=list[rowIdx-1].id; e.preventDefault(); renderMembers(); }
+  else if(e.key==='ArrowRight' && colIdx<SP_COLS.length-1) { spActive.field=SP_COLS[colIdx+1].field; e.preventDefault(); renderMembers(); }
+  else if(e.key==='ArrowLeft' && colIdx>0) { spActive.field=SP_COLS[colIdx-1].field; e.preventDefault(); renderMembers(); }
+  else if(e.key==='Enter' || e.key==='F2') {
+    e.preventDefault();
+    spEditMode=true; renderMembers();
+    setTimeout(()=>{const i=document.getElementById('sp-input');if(i){i.focus();i.select&&i.select();}},20);
+  } else if(e.key==='Delete' && typeof isAdmin!=='undefined' && isAdmin) {
+    const m=members.find(x=>x.id===spActive.id);
+    if(m) { spUndoStack.push({id:m.id,field:spActive.field,oldVal:m[spActive.field]}); m[spActive.field]=''; renderMembers(); }
+  } else if((e.ctrlKey||e.metaKey) && e.key==='z') {
+    e.preventDefault(); spUndo();
+  }
+}
+
+function spUndo() {
+  if(!spUndoStack.length) { toast('没有可撤销的操作','err'); return; }
+  const {id, field, oldVal} = spUndoStack.pop();
+  const m = members.find(x=>x.id===id);
+  if(m) { m[field]=oldVal; renderMembers(); toast('已撤销','ok'); }
+}
+
+function spSort(field) {
+  if(spSortField===field) spSortDir*=-1;
+  else { spSortField=field; spSortDir=1; }
+  // Update sort indicators
+  SP_COLS.forEach(c=>{
+    const el=document.getElementById('sort-'+c.field);
+    if(el) el.textContent = c.field===spSortField ? (spSortDir===1?' ↑':' ↓') : '';
+  });
+  renderMembers();
+}
+
+function spRowClick(e, id) {
+  if(e.shiftKey && spLastClick!==null) {
+    const list=spFiltered(), a=list.findIndex(m=>m.id===spLastClick), b=list.findIndex(m=>m.id===id);
+    const [lo,hi]=[Math.min(a,b),Math.max(a,b)];
+    for(let i=lo;i<=hi;i++) spSel.add(list[i].id);
+  } else if(e.ctrlKey||e.metaKey) {
+    spSel.has(id)?spSel.delete(id):spSel.add(id);
+  } else {
+    spSel.clear(); spSel.add(id);
+  }
+  spLastClick=id;
+  renderMembers();
+  updateSpSelInfo();
+}
+
+function updateSpSelInfo() {
+  const info=document.getElementById('sp-sel-info');
+  const total=document.getElementById('sp-total');
+  if(info) info.innerHTML = spSel.size>0
+    ? `已选 <b>${spSel.size}</b> 行 · 共 <b>${spFiltered().length}</b> / <b>${members.length}</b> 人`
+    : `共 <b>${spFiltered().length}</b> / <b id="sp-total">${members.length}</b> 人`;
+}
+
+// ── Fill Down ──
+function spFillDown() {
+  if(!spActive) { toast('请先点击一个格子选择要填充的列','err'); return; }
+  const selArr = [...spSel];
+  if(selArr.length<2) { toast('请先选择多行（点击行号，Shift+点击可多选）','err'); return; }
+  const field = spActive.field;
+  const list = spFiltered();
+  const selRows = list.filter(m=>spSel.has(m.id));
+  if(!selRows.length) return;
+  const srcVal = selRows[0][field];
+  if(!confirm(`将「${srcVal||'(空)'}」填充到选中的 ${selRows.length} 行的「${SP_COLS.find(c=>c.field===field)?.label||field}」列？`)) return;
+  selRows.forEach(m => {
+    spUndoStack.push({id:m.id, field, oldVal:m[field]});
+    m[field] = field==='dkp' ? parseInt(srcVal)||0 : srcVal;
+    clearTimeout(m._saveTimer);
+    m._saveTimer = setTimeout(()=>db.upsertMember(m), 800);
+  });
+  renderMembers(); renderDkp();
+  toast(`已将「${srcVal}」填充到 ${selRows.length} 行`, 'ok');
+}
+
+// ── Add Row ──
+function spAddRow() {
+  const d={id:uid++,wx:'新团员',bn:'',char:'',cls:'法师',role:'DPS',st:'在',dkp:0,note:'',db_id:null};
+  members.push(d);
+  db.upsertMember(d);
+  spActive={id:d.id, field:'wx'};
+  spSel.clear(); spSel.add(d.id);
+  renderMembers();
+  setTimeout(()=>{const i=document.getElementById('sp-input');if(i){i.focus();i.select&&i.select();}},30);
+  toast('已添加新行，请填写信息','ok');
+}
+
+// ── Delete selected rows ──
+async function spDeleteRows() {
+  if(!spSel.size) { toast('请先选择要删除的行','err'); return; }
+  const names = [...spSel].map(id=>members.find(m=>m.id===id)?.char||members.find(m=>m.id===id)?.wx||'?').join('、');
+  if(!confirm(`确定删除以下团员？
+${names}
+
+此操作不可恢复！`)) return;
+  for(const id of spSel) {
+    const m=members.find(x=>x.id===id);
+    if(m?.db_id) await db.deleteMember(m.db_id);
+  }
+  members=members.filter(m=>!spSel.has(m.id));
+  spSel.clear(); spActive=null;
+  renderMembers(); renderDkp();
+  toast('已删除选中团员','ok');
+}
+
+// Dismiss active cell when clicking outside
+document.addEventListener('click', e=>{
+  if(spActive && !e.target.closest('#sp-members') && !e.target.closest('.sp-toolbar')) {
+    spCommitCurrent();
+    spActive=null;
+  }
+});
+
 function filterM(q){mF=q;renderMembers();}
 function filterR(r){rF=r;renderMembers();}
 
