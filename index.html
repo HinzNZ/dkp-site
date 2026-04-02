@@ -1152,16 +1152,18 @@ function renderED(id){
   const subTanks=subs.filter(m=>m.role==='T');
   const subHeals=subs.filter(m=>m.role==='N');
   const subDps=subs.filter(m=>!['T','N','会长','副会长','团长'].includes(m.role));
-  const dRows=e.dkpLog.map(l=>{
+  const dRows=e.dkpLog.map((l,li)=>{
     let who;
-    if(l.scope==='all'){
-      const totalRoster=(e.roster.length+(e.rosterSubs||[]).length); who='<span style="color:var(--muted);font-size:11px">'+( l.scope==='main'?'主力 ('+e.roster.length+'人)':l.scope==='sub'?'替补 ('+(e.rosterSubs||[]).length+'人)':'全体 ('+totalRoster+'人)')+'</span>';
+    const totalRoster=(e.roster.length+(e.rosterSubs||[]).length);
+    if(l.scope==='all'||l.scope==='main'||l.scope==='sub'){
+      const scopeLabel=l.scope==='main'?'主力 ('+e.roster.length+'人)':l.scope==='sub'?'替补 ('+(e.rosterSubs||[]).length+'人)':'全体 ('+totalRoster+'人)';
+      who='<span style="color:var(--muted);font-size:11px">'+scopeLabel+'</span>';
     } else {
-      const names=(l.members||[]).map(mid=>{const mm=members.find(x=>x.id===mid);return mm?mm.char||mm.wx:'?';});
       const coloredNames=(l.members||[]).map(mid=>{const mm=members.find(x=>x.id===mid);return mm?`<span style="color:${clsColor(mm.cls)}">${mm.char||mm.wx}</span>`:'?';});
       who='<span style="font-size:11px">'+coloredNames.join('<span style="color:var(--muted)">、</span>')+'</span>';
     }
-    return`<div class="lrow"><span class="lt">${l.time}</span><span class="lw" style="color:var(--green);min-width:60px">+${l.amount}</span><span class="li">${l.type}${l.note?' · '+l.note:''}</span><span class="la" style="text-align:right;min-width:120px">${who}</span></div>`;
+    const adminBtns=`<button class="admin-only" onclick="openEditDkpLog(${id},${li})" style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);font-size:10px;padding:2px 8px;border-radius:5px;cursor:pointer;font-family:inherit;flex-shrink:0">编辑</button>`;
+    return`<div class="lrow" style="flex-wrap:wrap;gap:6px"><span class="lt" style="flex-shrink:0">${l.time}</span><span class="lw" style="color:var(--green);min-width:60px;flex-shrink:0">+${l.amount}</span><span class="li" style="flex:1;min-width:80px">${l.type}${l.note?' · '+l.note:''}</span><span class="la" style="text-align:right;min-width:100px">${who}</span>${adminBtns}</div>`;
   }).join('');
   const lRows=e.lootLog.map(l=>{
     const m=members.find(x=>x.id===l.mid);
@@ -1402,6 +1404,218 @@ function confirmDkp(){
   renderDkpChangeLog();
   closeMo('mo-dkp');renderED(dkpEvtId);toast(`已为 ${tgts.length} 人加 ${amt} DKP ✨`,'ok');
 }
+// ══ EDIT DKP LOG ══
+let edlEvtId = null;     // event local id
+let edlLogIdx = null;    // index in e.dkpLog array
+let edlSel = [];         // currently selected member ids
+
+function openEditDkpLog(evtId, logIdx) {
+  const e = events.find(x => x.id === evtId);
+  if (!e) return;
+  if(!e.rosterSubs) e.rosterSubs = [];
+  const l = e.dkpLog[logIdx];
+  if (!l) return;
+  edlEvtId = evtId;
+  edlLogIdx = logIdx;
+
+  // Pre-fill fields
+  document.getElementById('edl-amt').value = l.amount;
+  document.getElementById('edl-note').value = l.note || '';
+
+  // Resolve the original member list
+  const mainIds = e.roster;
+  const subIds  = e.rosterSubs;
+  const allIds  = [...mainIds, ...subIds];
+
+  // Figure out who was originally included
+  if (l.scope === 'all')  edlSel = [...allIds];
+  else if (l.scope === 'main') edlSel = [...mainIds];
+  else if (l.scope === 'sub')  edlSel = [...subIds];
+  else edlSel = [...(l.members || [])]; // custom list
+
+  renderEdlPicker(e);
+  updateEdlDiffHint(e, l);
+  // Highlight no group button initially (custom)
+  ['all','main','sub','none'].forEach(g => document.getElementById('edl-grp-'+g)?.classList.remove('on'));
+  openMo('mo-edit-dkplog');
+}
+
+function renderEdlPicker(e) {
+  if (!e) e = events.find(x => x.id === edlEvtId);
+  if (!e) return;
+  if(!e.rosterSubs) e.rosterSubs = [];
+  const mainIds = e.roster;
+  const subIds  = e.rosterSubs;
+
+  const buildSection = (ids, label, color) => {
+    if (!ids.length) return '';
+    const cards = ids.map(i => {
+      const m = members.find(x => x.id === i); if (!m) return '';
+      const on = edlSel.includes(i);
+      return `<div class="pcard${on?' on':''}" id="edl-${m.id}" onclick="togEdl(${m.id})">
+        <div class="pc-n" style="color:${clsColor(m.cls)};font-weight:600">${m.char||m.wx}</div>
+        <div class="pc-d" style="color:${clsColor(m.cls)}66;font-size:10px">${m.cls} · ${m.dkp} DKP</div>
+      </div>`;
+    }).join('');
+    return `<div style="font-size:10px;color:${color};letter-spacing:1px;margin:8px 0 5px;font-weight:700;grid-column:1/-1">${label} (${ids.length})</div>${cards}`;
+  };
+
+  document.getElementById('edl-pk').innerHTML =
+    buildSection(mainIds, '🗡️ 主力', 'var(--gold)') +
+    buildSection(subIds,  '🔄 替补', 'var(--blue)') ||
+    '<div style="color:var(--muted);grid-column:1/-1;padding:10px;text-align:center">暂无出席团员</div>';
+}
+
+function togEdl(id) {
+  const el = document.getElementById(`edl-${id}`);
+  if (edlSel.includes(id)) {
+    edlSel = edlSel.filter(x => x !== id);
+    el?.classList.remove('on');
+  } else {
+    edlSel.push(id);
+    el?.classList.add('on');
+  }
+  const e = events.find(x => x.id === edlEvtId);
+  const l = e?.dkpLog[edlLogIdx];
+  if (l) updateEdlDiffHint(e, l);
+}
+
+function edlSetGroup(group) {
+  const e = events.find(x => x.id === edlEvtId);
+  if (!e) return;
+  if(!e.rosterSubs) e.rosterSubs = [];
+  ['all','main','sub','none'].forEach(g => document.getElementById('edl-grp-'+g)?.classList.toggle('on', g===group));
+  const allIds = [...e.roster, ...e.rosterSubs];
+  if      (group==='all')  edlSel = [...allIds];
+  else if (group==='main') edlSel = [...e.roster];
+  else if (group==='sub')  edlSel = [...e.rosterSubs];
+  else if (group==='none') edlSel = [];
+  renderEdlPicker(e);
+  const l = e.dkpLog[edlLogIdx];
+  if (l) updateEdlDiffHint(e, l);
+}
+
+function updateEdlDiffHint(e, l) {
+  const hint = document.getElementById('edl-diff-hint');
+  if (!hint) return;
+  const newAmt  = parseInt(document.getElementById('edl-amt')?.value) || 0;
+  const oldAmt  = l.amount;
+  const oldMems = l.scope==='all'  ? [...e.roster,...(e.rosterSubs||[])]
+                : l.scope==='main' ? [...e.roster]
+                : l.scope==='sub'  ? [...(e.rosterSubs||[])]
+                : [...(l.members||[])];
+  const added   = edlSel.filter(id => !oldMems.includes(id));
+  const removed = oldMems.filter(id => !edlSel.includes(id));
+  const amtChanged = newAmt !== oldAmt;
+  let parts = [];
+  if (amtChanged) parts.push(`分数 ${oldAmt}→${newAmt}`);
+  if (added.length)   parts.push(`新增 ${added.map(id=>{const m=members.find(x=>x.id===id);return m?m.char||m.wx:'?';}).join('、')}`);
+  if (removed.length) parts.push(`移除 ${removed.map(id=>{const m=members.find(x=>x.id===id);return m?m.char||m.wx:'?';}).join('、')}`);
+  hint.style.display = parts.length ? '' : 'none';
+  hint.innerHTML = parts.length
+    ? `<span style="color:var(--gold)">📝 变更预览：</span> ${parts.join('；')}`
+    : '';
+}
+
+async function saveEditDkpLog() {
+  const e = events.find(x => x.id === edlEvtId);
+  if (!e) return;
+  if(!e.rosterSubs) e.rosterSubs = [];
+  const l = e.dkpLog[edlLogIdx];
+  if (!l) return;
+
+  const newAmt  = parseInt(document.getElementById('edl-amt').value) || 0;
+  const newNote = document.getElementById('edl-note').value.trim();
+  const newType = l.type; // keep original type label
+
+  // Resolve old member list
+  const oldMems = l.scope==='all'  ? [...e.roster,...(e.rosterSubs||[])]
+                : l.scope==='main' ? [...e.roster]
+                : l.scope==='sub'  ? [...(e.rosterSubs||[])]
+                : [...(l.members||[])];
+
+  const added   = edlSel.filter(id => !oldMems.includes(id));
+  const removed = oldMems.filter(id => !edlSel.includes(id));
+
+  // 1. Reverse DKP for removed members (they had old amount added, remove it)
+  removed.forEach(id => {
+    const m = members.find(x => x.id === id);
+    if (m) { m.dkp -= l.amount; if(m.db_id) db.updateMemberDkp(m.db_id, m.dkp); }
+  });
+
+  // 2. Adjust DKP for members who stay: apply diff (newAmt - oldAmt)
+  const stayed = edlSel.filter(id => oldMems.includes(id));
+  const diff   = newAmt - l.amount;
+  if (diff !== 0) {
+    stayed.forEach(id => {
+      const m = members.find(x => x.id === id);
+      if (m) { m.dkp += diff; if(m.db_id) db.updateMemberDkp(m.db_id, m.dkp); }
+    });
+  }
+
+  // 3. Give new amount to newly added members
+  added.forEach(id => {
+    const m = members.find(x => x.id === id);
+    if (m) { m.dkp += newAmt; if(m.db_id) db.updateMemberDkp(m.db_id, m.dkp); }
+  });
+
+  // 4. Update the log object
+  l.amount  = newAmt;
+  l.note    = newNote;
+  l.scope   = 'custom';
+  l.members = [...edlSel];
+
+  // 5. Persist to DB
+  if (l.db_id) {
+    db.updateDkpLog(l.db_id, l);
+  }
+
+  // 6. Log DKP changes
+  const ts = new Date().toISOString();
+  [...removed.map(id=>({id, delta: -l.amount})), ...added.map(id=>({id, delta: newAmt})), ...(diff!==0?stayed.map(id=>({id, delta: diff})):[]) ].forEach(({id, delta})=>{
+    const m = members.find(x=>x.id===id); if(!m) return;
+    const entry = { member_id: m.db_id||null, member_name: m.char||m.wx, change_type: '手动调整', amount: delta, dkp_before: m.dkp-delta, dkp_after: m.dkp, note: `编辑DKP记录: ${newType}`, event_name: e.name||'', ts };
+    dkpChangeLog.unshift(entry);
+    if(dkpChangeLog.length>500) dkpChangeLog.pop();
+    db.insertDkpChange(entry);
+  });
+
+  renderDkpChangeLog();
+  closeMo('mo-edit-dkplog');
+  renderED(edlEvtId);
+  toast('DKP记录已更新 ✓', 'ok');
+}
+
+async function deleteDkpLogEntry() {
+  if (!confirm('确定删除这条DKP记录？\n已加给团员的DKP将会扣回。')) return;
+  const e = events.find(x => x.id === edlEvtId);
+  if (!e) return;
+  if(!e.rosterSubs) e.rosterSubs = [];
+  const l = e.dkpLog[edlLogIdx];
+  if (!l) return;
+
+  // Reverse DKP for all members who got this log's points
+  const mems = l.scope==='all'  ? [...e.roster,...(e.rosterSubs||[])]
+             : l.scope==='main' ? [...e.roster]
+             : l.scope==='sub'  ? [...(e.rosterSubs||[])]
+             : [...(l.members||[])];
+  mems.forEach(id => {
+    const m = members.find(x => x.id === id);
+    if (m) { m.dkp -= l.amount; if(m.db_id) db.updateMemberDkp(m.db_id, m.dkp); }
+  });
+
+  // Delete from DB
+  if (l.db_id) db.deleteDkpLog(l.db_id);
+
+  // Remove from local array
+  e.dkpLog.splice(edlLogIdx, 1);
+
+  closeMo('mo-edit-dkplog');
+  renderED(edlEvtId);
+  renderDkp();
+  toast('DKP记录已删除，积分已扣回', 'ok');
+}
+
 
 let lootSelItem = null;   // selected gear_item object
 let lootSelRaid = null;
@@ -2857,7 +3071,16 @@ const db = {
   },
   async insertDkpLog(eventDbId, log) {
     const row = { event_id: eventDbId, type: log.type||'', amount: log.amount||0, scope: log.scope||'all', members: log.members||[], note: log.note||'', log_time: log.time||'' };
-    return await sbFetch('dkp_logs', 'POST', row, 'return=minimal');
+    const res = await sbFetch('dkp_logs', 'POST', row, 'return=representation');
+    if(res && res[0]) { log.db_id = res[0].id; return res[0]; }
+    return null;
+  },
+  async updateDkpLog(dbId, log) {
+    const row = { type: log.type||'', amount: log.amount||0, scope: log.scope||'all', members: log.members||[], note: log.note||'' };
+    return await sbFetch(`dkp_logs?id=eq.${dbId}`, 'PATCH', row, 'return=minimal');
+  },
+  async deleteDkpLog(dbId) {
+    return await sbFetch(`dkp_logs?id=eq.${dbId}`, 'DELETE', null, 'return=minimal');
   },
 
   // ── DKP Change Log ──
@@ -2946,7 +3169,7 @@ function rowToEvent(r) {
   return { id: r.id, db_id: r.id, name: r.name, date: r.date, time: r.time||'20:00', raid: r.raid||'', note: r.note||'', status: r.status||'planned', roster, rosterSubs, dkpLog:[], lootLog:[] };
 }
 function rowToDkpLog(r) {
-  return { type: r.type, amount: r.amount, scope: r.scope, members: r.members||[], note: r.note||'', time: r.log_time||'' };
+  return { db_id: r.id, type: r.type, amount: r.amount, scope: r.scope, members: r.members||[], note: r.note||'', time: r.log_time||'' };
 }
 function rowToLootLog(r) {
   return {
@@ -3227,6 +3450,31 @@ console.log('AT Guild DKP ready. Waiting for login...');
   <div class="md-footer">
     <button class="btn btn-outline" onclick="closeMo('mo-chpw')">取消</button>
     <button class="btn btn-gold" onclick="confirmChPw()">保存修改</button>
+  </div>
+</div></div>
+
+<!-- EDIT DKP LOG MODAL -->
+<div class="mo" id="mo-edit-dkplog"><div class="md" style="width:680px">
+  <div class="md-title">✏️ 编辑DKP记录</div>
+  <div class="mg2" style="margin-bottom:13px">
+    <div class="fg"><label class="fl">DKP分数</label><input class="fi" type="number" id="edl-amt" oninput="(()=>{const e=events.find(x=>x.id===edlEvtId);const l=e?.dkpLog[edlLogIdx];if(l)updateEdlDiffHint(e,l);})()"></div>
+    <div class="fg"><label class="fl">备注</label><input class="fi" id="edl-note" placeholder="可选备注"></div>
+  </div>
+  <div class="fg" style="margin-bottom:10px">
+    <label class="fl">应用对象 <span style="color:var(--muted);font-weight:400">（勾选的团员会获得DKP，取消勾选则扣回）</span></label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+      <button class="pb" id="edl-grp-all"  onclick="edlSetGroup('all')"  style="font-size:11px;padding:4px 10px">全体</button>
+      <button class="pb" id="edl-grp-main" onclick="edlSetGroup('main')" style="font-size:11px;padding:4px 10px">仅主力</button>
+      <button class="pb" id="edl-grp-sub"  onclick="edlSetGroup('sub')"  style="font-size:11px;padding:4px 10px">仅替补</button>
+      <button class="pb" id="edl-grp-none" onclick="edlSetGroup('none')" style="font-size:11px;padding:4px 10px">全不选</button>
+    </div>
+  </div>
+  <div id="edl-pk" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:5px;max-height:260px;overflow-y:auto;padding:2px;margin-bottom:14px"></div>
+  <div style="font-size:11px;color:var(--muted);padding:8px 12px;background:rgba(208,80,80,.06);border:1px solid rgba(208,80,80,.2);border-radius:7px;margin-bottom:4px" id="edl-diff-hint"></div>
+  <div class="md-footer">
+    <button class="btn btn-red btn-sm" onclick="deleteDkpLogEntry()" style="margin-right:auto">🗑 删除此记录</button>
+    <button class="btn btn-outline" onclick="closeMo('mo-edit-dkplog')">取消</button>
+    <button class="btn btn-gold" onclick="saveEditDkpLog()">✓ 保存修改</button>
   </div>
 </div></div>
 </body>
