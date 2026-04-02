@@ -1393,6 +1393,13 @@ function resetLootTypeMode() {
   if(btn)    btn.style.display='none';
 }
 
+// Item mode member selection
+function selLoot(id) {
+  if(lootSel!==null) document.getElementById(`lp-${lootSel}`)?.classList.remove('on');
+  lootSel = id;
+  document.getElementById(`lp-${id}`)?.classList.add('on');
+}
+
 // Type mode member selection
 let lootSelType = null;
 function selLootType(id) {
