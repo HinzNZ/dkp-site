@@ -2837,8 +2837,8 @@ const db = {
     return await sbFetch('events?select=*&order=date.desc,created_at.desc') || [];
   },
   async insertEvent(ev) {
-    const rosterData = { m: ev.roster||[], s: ev.rosterSubs||[] };
-    const row = { name: ev.name, date: ev.date, time: ev.time||'20:00', raid: ev.raid||'', note: ev.note||'', status: ev.status||'planned', roster: rosterData };
+    const rosterEncoded = [...(ev.roster||[]), ...(ev.rosterSubs||[]).map(id=>-id)];
+    const row = { name: ev.name, date: ev.date, time: ev.time||'20:00', raid: ev.raid||'', note: ev.note||'', status: ev.status||'planned', roster: rosterEncoded };
     const res = await sbFetch('events', 'POST', row, 'return=representation');
     if (res && res[0]) { ev.db_id = res[0].id; return res[0]; }
     return null;
@@ -2847,8 +2847,8 @@ const db = {
     return await sbFetch(`events?id=eq.${dbId}`, 'PATCH', { status }, 'return=minimal');
   },
   async updateEventRoster(dbId, roster, rosterSubs) {
-    const rosterData = { m: roster||[], s: rosterSubs||[] };
-    return await sbFetch(`events?id=eq.${dbId}`, 'PATCH', { roster: rosterData }, 'return=minimal');
+    const rosterEncoded = [...(roster||[]), ...(rosterSubs||[]).map(id=>-id)];
+    return await sbFetch(`events?id=eq.${dbId}`, 'PATCH', { roster: rosterEncoded }, 'return=minimal');
   },
 
   // ── DKP Logs ──
@@ -2934,8 +2934,15 @@ function rowToMember(r) {
 function rowToEvent(r) {
   let roster = [], rosterSubs = [];
   const raw = r.roster;
-  if (Array.isArray(raw)) { roster = raw; }
-  else if (raw && typeof raw === 'object') { roster = raw.m || []; rosterSubs = raw.s || []; }
+  if (Array.isArray(raw)) {
+    // Negative IDs = subs, positive = main
+    roster    = raw.filter(id => id > 0);
+    rosterSubs = raw.filter(id => id < 0).map(id => -id);
+  } else if (raw && typeof raw === 'object') {
+    // Legacy object format {m,s} - just in case
+    roster = (raw.m || []).filter(id => id > 0);
+    rosterSubs = (raw.s || []).filter(id => id > 0);
+  }
   return { id: r.id, db_id: r.id, name: r.name, date: r.date, time: r.time||'20:00', raid: r.raid||'', note: r.note||'', status: r.status||'planned', roster, rosterSubs, dkpLog:[], lootLog:[] };
 }
 function rowToDkpLog(r) {
