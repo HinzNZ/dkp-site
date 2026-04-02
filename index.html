@@ -24,7 +24,9 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Noto Sans SC',sans-serif;min-height:100vh;overflow-x:hidden;font-size:14px;line-height:1.6}
-body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 15% 10%,rgba(201,168,76,.05) 0%,transparent 70%),radial-gradient(ellipse 50% 50% at 85% 85%,rgba(60,80,200,.05) 0%,transparent 70%);pointer-events:none;z-index:0}
+body{position:relative;z-index:1}
+body::before{content:'';position:fixed;inset:0;background:url('logo.png') center/cover no-repeat;filter:blur(28px);opacity:0.25;pointer-events:none;z-index:-2}
+body::after{content:'';position:fixed;inset:0;background:rgba(5,8,15,0.65);z-index:-1}
 
 .hdr{position:sticky;top:0;z-index:200;background:rgba(10,12,16,.96);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:0 28px}
 .hdr-in{max-width:1500px;margin:0 auto;display:flex;align-items:center;gap:16px;height:60px}
@@ -466,6 +468,9 @@ body.viewer-mode .admin-only{display:none!important}
 </style>
 </head>
 <body>
+<div style="text-align:center;margin-top:20px;">
+  <img src="logo.png" style="width:180px;filter:drop-shadow(0 0 12px gold);">
+</div>
 
 <div class="hdr"><div class="hdr-in">
   <div class="logo" style="display:flex;align-items:center;gap:10px">
