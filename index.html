@@ -257,6 +257,7 @@ body.light-mode .logo .cn { color:var(--lmuted); }
 body.light-mode .stitle { color:var(--lgold); }
 body.light-mode .stitle::after { background:rgba(100,72,22,.2); }
 /* Cards */
+body.light-mode #dkp-change-log > div{background:var(--lbg-card)!important;border-color:rgba(100,72,22,.15)!important}
 body.light-mode .gc,
 body.light-mode .tb-wrap,
 body.light-mode .rcard,
@@ -437,6 +438,7 @@ body.light-mode .sp-rn{background:rgba(100,72,22,.05)!important}
 @media(max-width:900px){
   .cal-page{grid-template-columns:1fr}.cal-sidebar{display:none}
   .stats-row{grid-template-columns:1fr 1fr}
+  #pg-dkp > div:last-child{grid-template-columns:1fr}
   .gear-layout{grid-template-columns:1fr}
   .ed-stats{grid-template-columns:1fr 1fr 1fr}
 }
@@ -569,12 +571,37 @@ body.viewer-mode .admin-only{display:none!important}
 
 <!-- DKP PAGE -->
 <div class="pg" id="pg-dkp">
-  <div class="stitle">DKP 排行榜</div>
-  <div class="stats-row" id="dkp-stats"></div>
-  <div class="tb-wrap"><table>
-    <thead><tr><th>排名</th><th>角色名</th><th>职业</th><th>职责</th><th>当前DKP</th><th>状态</th></tr></thead>
-    <tbody id="dkp-tbody"></tbody>
-  </table></div>
+  <div class="stats-row" id="dkp-stats" style="margin-bottom:16px"></div>
+  <div style="display:grid;grid-template-columns:1fr 380px;gap:18px;align-items:start">
+    <!-- Left: leaderboard -->
+    <div>
+      <div class="stitle" style="font-size:10px;margin-bottom:10px">DKP 排行榜</div>
+      <div class="tb-wrap"><table>
+        <thead><tr><th>排名</th><th>角色名</th><th>职业</th><th>职责</th><th>当前DKP</th><th>状态</th></tr></thead>
+        <tbody id="dkp-tbody"></tbody>
+      </table></div>
+    </div>
+    <!-- Right: change log -->
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <div class="stitle" style="font-size:10px;margin:0">DKP 变动记录</div>
+        <div style="margin-left:auto;display:flex;gap:6px">
+          <select class="fs" id="dcl-member" onchange="renderDkpChangeLog()" style="font-size:11px;height:26px;max-width:110px">
+            <option value="">全部团员</option>
+          </select>
+          <select class="fs" id="dcl-type" onchange="renderDkpChangeLog()" style="font-size:11px;height:26px;max-width:90px">
+            <option value="">全部类型</option>
+            <option value="活动加分">活动加分</option>
+            <option value="分配装备">分配装备</option>
+            <option value="手动调整">手动调整</option>
+          </select>
+        </div>
+      </div>
+      <div id="dkp-change-log" style="max-height:calc(100vh - 280px);overflow-y:auto;display:flex;flex-direction:column;gap:5px">
+        <div style="color:var(--muted);text-align:center;padding:30px;font-size:13px">暂无变动记录</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- GEAR PAGE -->
@@ -991,6 +1018,7 @@ let wowItems=['主宰之盔','深渊铸造者之盔','虚空侵扰者面甲','�
 
 let uid=100,curEvt=null,dbLoaded=false;
 let gearItems=[];
+let dkpChangeLog=[];  // global DKP change history
 let calY,calM,mainY,mainM,weekStart,calView='month';
 let dkpEvtId=null,lootEvtId=null,dkpSc='all',dkpSel=[],lootSel=null;
 let editMemId=null,mF='',rF='';
@@ -1275,6 +1303,26 @@ function confirmDkp(){
   const dlog={type:note||'加分',amount:amt,scope:dkpSc,members:dkpSc==='sel'?[...dkpSel]:[],note,time:nowT()};
   e.dkpLog.push(dlog);
   if(e.db_id) db.insertDkpLog(e.db_id, dlog);
+  // Log each member's DKP change
+  tgts.forEach(id=>{
+    const m=members.find(x=>x.id===id);
+    if(!m) return;
+    const entry={
+      member_id: m.db_id||null,
+      member_name: m.char||m.wx,
+      change_type: dlog.type||'活动加分',
+      amount: amt,
+      dkp_before: m.dkp-amt,
+      dkp_after: m.dkp,
+      note: dlog.note||'',
+      event_name: e.name||'',
+      ts: new Date().toISOString(),
+    };
+    dkpChangeLog.unshift(entry);
+    if(dkpChangeLog.length>500) dkpChangeLog.pop();
+    db.insertDkpChange(entry);
+  });
+  renderDkpChangeLog();
   closeMo('mo-dkp');renderED(dkpEvtId);toast(`已为 ${tgts.length} 人加 ${amt} DKP ✨`,'ok');
 }
 
@@ -1351,6 +1399,38 @@ function selLootType(id) {
   if(lootSelType!==null) document.getElementById(`lpt-${lootSelType}`)?.classList.remove('on');
   lootSelType=id;
   document.getElementById(`lpt-${id}`)?.classList.add('on');
+}
+
+function selectLootQual(qual, btn) {
+  lootSelQual = qual;
+  // Update all quality buttons styling
+  document.querySelectorAll('.loot-qual-btn').forEach(b => {
+    const q = b.dataset.qual;
+    const colors = { normal:['#f4e000','rgba(244,224,0,.5)','rgba(244,224,0,.1)'], hero:['#e84040','rgba(232,64,64,.5)','rgba(232,64,64,.1)'], epic:['#a335ee','rgba(163,53,238,.5)','rgba(163,53,238,.1)'] };
+    const [col, bord, bg] = colors[q] || colors.normal;
+    if(b.dataset.qual === qual) {
+      b.style.color = col;
+      b.style.borderColor = bord;
+      b.style.background = bg;
+      b.classList.add('on');
+    } else {
+      b.style.color = 'var(--muted)';
+      b.style.borderColor = colors[q][1].replace('.5','0.25');
+      b.style.background = 'transparent';
+      b.classList.remove('on');
+    }
+  });
+  // Update DKP price based on selected quality
+  const priceMap = { normal:'n', hero:'h', epic:'e' };
+  const key = priceMap[qual] || 'n';
+  if(lootMode === 'item' && lootSelItem) {
+    // Item mode: use item's gear type prices
+    const gt = gearTypes.find(t => t.name === lootSelItem.slot || t.name === lootSelItem.name);
+    if(gt) sv('l-dkp', gt[key] || lootSelItem[key] || 0);
+    else   sv('l-dkp', lootSelItem[key] || lootSelItem.n || 0);
+  } else if(lootMode === 'type' && lootSelGearType) {
+    sv('l-dkp-type', lootSelGearType[key] || 0);
+  }
 }
 
 function lootGoStep(step) {
@@ -1593,6 +1673,24 @@ function confirmLoot(){
     db.insertLootLog(e.db_id, llog);
     if(m.db_id) db.updateMemberDkp(m.db_id, m.dkp);
   }
+  // Log DKP change from loot
+  if(dkp > 0) {
+    const lootEntry = {
+      member_id: m.db_id||null,
+      member_name: m.char||m.wx,
+      change_type: '分配装备',
+      amount: -dkp,
+      dkp_before: m.dkp+dkp,
+      dkp_after: m.dkp,
+      note: item,
+      event_name: e?.name||'',
+      ts: new Date().toISOString(),
+    };
+    dkpChangeLog.unshift(lootEntry);
+    if(dkpChangeLog.length>500) dkpChangeLog.pop();
+    db.insertDkpChange(lootEntry);
+    renderDkpChangeLog();
+  }
   closeMo('mo-loot');renderED(lootEvtId);renderGloot();
   toast(`${m.char||m.wx} 获得 ${item}，扣 ${dkp} DKP`,'ok');
 }
@@ -1749,10 +1847,30 @@ function spCommit(id, field, rawVal) {
   let val = rawVal;
   if(field==='dkp') val = parseInt(rawVal)||0;
   if(m[field] === val) { spActive=null; renderMembers(); return; }
+  const oldVal = m[field];
   // Push undo
-  spUndoStack.push({id, field, oldVal: m[field]});
+  spUndoStack.push({id, field, oldVal});
   if(spUndoStack.length > 50) spUndoStack.shift();
   m[field] = val;
+  // If DKP changed, log it
+  if(field==='dkp') {
+    const diff = val - (parseInt(oldVal)||0);
+    const entry = {
+      member_id: m.db_id||null,
+      member_name: m.char||m.wx,
+      change_type: '手动调整',
+      amount: diff,
+      dkp_before: parseInt(oldVal)||0,
+      dkp_after: val,
+      note: '团员管理页手动修改',
+      event_name: '',
+      ts: new Date().toISOString(),
+    };
+    dkpChangeLog.unshift(entry);
+    if(dkpChangeLog.length > 500) dkpChangeLog.pop();
+    db.insertDkpChange(entry);
+    renderDkpChangeLog();
+  }
   // DB save with debounce
   clearTimeout(m._saveTimer);
   m._saveTimer = setTimeout(()=>{ db.upsertMember(m); renderDkp(); }, 600);
@@ -1913,6 +2031,58 @@ function filterM(q){mF=q;renderMembers();}
 function filterR(r){rF=r;renderMembers();}
 
 // ══ DKP ══
+function renderDkpChangeLog() {
+  const el = document.getElementById('dkp-change-log');
+  if(!el) return;
+  // Update member filter options
+  const memSel = document.getElementById('dcl-member');
+  if(memSel && memSel.options.length <= 1) {
+    [...members].sort((a,b)=>(a.char||a.wx).localeCompare(b.char||b.wx)).forEach(m=>{
+      const o=document.createElement('option');
+      o.value=m.char||m.wx; o.textContent=m.char||m.wx;
+      memSel.appendChild(o);
+    });
+  }
+  const filterMem = document.getElementById('dcl-member')?.value||'';
+  const filterType = document.getElementById('dcl-type')?.value||'';
+  let list = dkpChangeLog;
+  if(filterMem) list=list.filter(e=>e.member_name===filterMem);
+  if(filterType) list=list.filter(e=>e.change_type===filterType);
+  if(!list.length) {
+    el.innerHTML='<div style="color:var(--muted);text-align:center;padding:30px;font-size:13px">暂无变动记录</div>';
+    return;
+  }
+  const typeColor = t => t==='分配装备'?'var(--red)':t==='手动调整'?'var(--blue)':'var(--green)';
+  const typeIcon  = t => t==='分配装备'?'🎁':t==='手动调整'?'✏️':'⚡';
+  el.innerHTML = list.map(e=>{
+    const m = members.find(x=>(x.char||x.wx)===e.member_name);
+    const mColor = m ? clsColor(m.cls) : 'var(--muted)';
+    const diff = e.amount >= 0
+      ? `<span style="color:var(--green);font-weight:700">+${e.amount}</span>`
+      : `<span style="color:var(--red);font-weight:700">${e.amount}</span>`;
+    // Format timestamp
+    let tsStr='';
+    try {
+      const d=new Date(e.ts);
+      tsStr=`${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+    } catch(err){}
+    return `<div style="background:var(--bg-card2);border:1px solid var(--border);border-left:3px solid ${typeColor(e.change_type)};border-radius:8px;padding:9px 12px;display:flex;flex-direction:column;gap:3px">
+      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+        <span style="font-size:13px">${typeIcon(e.change_type)}</span>
+        <span style="color:${mColor};font-weight:700;font-size:13px">${e.member_name}</span>
+        ${diff}
+        <span style="font-size:11px;color:var(--muted);margin-left:auto">${tsStr}</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:11px;color:${typeColor(e.change_type)};background:${typeColor(e.change_type)}18;padding:1px 7px;border-radius:4px;border:1px solid ${typeColor(e.change_type)}33">${e.change_type}</span>
+        ${e.event_name?`<span style="font-size:11px;color:var(--muted)">📅 ${e.event_name}</span>`:''}
+        ${e.note?`<span style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px" title="${e.note}">· ${e.note}</span>`:''}
+      </div>
+      <div style="font-size:10px;color:var(--muted)">${e.dkp_before} → ${e.dkp_after} DKP</div>
+    </div>`;
+  }).join('');
+}
+
 function renderDkp(){
   const s=[...members].sort((a,b)=>b.dkp-a.dkp);
   document.getElementById('dkp-stats').innerHTML=`
@@ -2273,7 +2443,7 @@ function showPg(p){
   document.getElementById('pg-'+p)?.classList.add('on');
   document.getElementById('nav-'+p)?.classList.add('on');
   if(p==='members')renderMembers();
-  if(p==='dkp')renderDkp();
+  if(p==='dkp'){renderDkp();renderDkpChangeLog();}
   if(p==='gear'){renderGear();renderGloot();renderGearItems();}
 }
 function toggleTheme(){
@@ -2564,6 +2734,14 @@ const db = {
     return await sbFetch('dkp_logs', 'POST', row, 'return=minimal');
   },
 
+  // ── DKP Change Log ──
+  async getDkpChanges(limit=200) {
+    return await sbFetch(`dkp_change_log?select=*&order=created_at.desc&limit=${limit}`) || [];
+  },
+  async insertDkpChange(row) {
+    return await sbFetch('dkp_change_log', 'POST', row, 'return=minimal');
+  },
+
   // ── Gear Items (specific loot drops by raid/boss) ──
   async getGearItems() {
     return await sbFetch('gear_items?select=*&order=raid,boss,id') || [];
@@ -2708,6 +2886,20 @@ async function loadAllFromDB() {
     if (gRows.length > 0) {
       gearTypes = gRows.map(rowToGearType);
     }
+
+    // Load DKP change log
+    const dclRows = await db.getDkpChanges(300);
+    dkpChangeLog = dclRows.map(r=>({
+      member_id: r.member_id,
+      member_name: r.member_name||'',
+      change_type: r.change_type||'',
+      amount: r.amount||0,
+      dkp_before: r.dkp_before||0,
+      dkp_after: r.dkp_after||0,
+      note: r.note||'',
+      event_name: r.event_name||'',
+      ts: r.created_at||r.ts||'',
+    }));
 
     // Load specific gear items (raid loot table)
     const giRows = await db.getGearItems();
