@@ -1159,14 +1159,20 @@ function renderED(id){
       const scopeLabel=l.scope==='main'?'主力 ('+e.roster.length+'人)':l.scope==='sub'?'替补 ('+(e.rosterSubs||[]).length+'人)':'全体 ('+totalRoster+'人)';
       who='<span style="color:var(--muted);font-size:11px">'+scopeLabel+'</span>';
     } else {
-      const coloredNames=(l.members||[]).map(mid=>{const mm=members.find(x=>x.id===mid);return mm?`<span style="color:${clsColor(mm.cls)}">${mm.char||mm.wx}</span>`:'?';});
-      who='<span style="font-size:11px">'+coloredNames.join('<span style="color:var(--muted)">、</span>')+'</span>';
+      // scope='custom' or any other: show individual names from members array
+      const memIds = l.members||[];
+      if(memIds.length===0){
+        who='<span style="color:var(--muted);font-size:11px">无</span>';
+      } else {
+        const coloredNames=memIds.map(mid=>{const mm=members.find(x=>x.id===mid||x.db_id===mid);return mm?`<span style="color:${clsColor(mm.cls)}">${mm.char||mm.wx}</span>`:'?';});
+        who='<span style="font-size:11px">'+coloredNames.join('<span style="color:var(--muted)">、</span>')+'</span>';
+      }
     }
     const adminBtns=`<button class="admin-only" onclick="openEditDkpLog(${id},${li})" style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);font-size:10px;padding:2px 8px;border-radius:5px;cursor:pointer;font-family:inherit;flex-shrink:0">编辑</button>`;
     return`<div class="lrow" style="flex-wrap:wrap;gap:6px"><span class="lt" style="flex-shrink:0">${l.time}</span><span class="lw" style="color:var(--green);min-width:60px;flex-shrink:0">+${l.amount}</span><span class="li" style="flex:1;min-width:80px">${l.type}${l.note?' · '+l.note:''}</span><span class="la" style="text-align:right;min-width:100px">${who}</span>${adminBtns}</div>`;
   }).join('');
   const lRows=e.lootLog.map((l,li)=>{
-    const m=members.find(x=>x.id===l.mid);
+    const m=members.find(x=>x.id===l.mid||x.db_id===l.mid);
     const qLabel={normal:'勇士',hero:'英雄',epic:'史诗'}[l.q]||l.q;
     const qColor={normal:'#f4e000',hero:'#e84040',epic:'#a335ee'}[l.q]||'var(--muted)';
     const srcTag = l.source==='type'
@@ -1378,6 +1384,7 @@ function togDkp(id){
 }
 async function confirmDkp(){
   const amt=parseInt(gv('dkp-amt'))||0,note=gv('dkp-note');
+  if(amt===0){toast('请填写DKP分数','err');return;}
   const e=events.find(x=>x.id===dkpEvtId);if(!e)return;
   const tgts=dkpSel;
   tgts.forEach(id=>{const m=members.find(x=>x.id===id);if(m){m.dkp+=amt;if(m.db_id)db.updateMemberDkp(m.db_id,m.dkp);}});
@@ -1649,7 +1656,9 @@ function openEditLootLog(evtId, logIdx) {
   if (!l) return;
   ellEvtId  = evtId;
   ellLogIdx = logIdx;
-  ellSelMid = l.mid;
+  // l.mid may be local id or db_id after reload — resolve to local id
+  const _midMem = members.find(x => x.id === l.mid || x.db_id === l.mid);
+  ellSelMid = _midMem ? _midMem.id : l.mid;
   ellQual   = l.q || 'normal';
 
   document.getElementById('ell-item').value = l.item || '';
@@ -1716,8 +1725,8 @@ async function saveEditLootLog() {
   const oldMid = l.mid;
   const oldDkp = l.dkp;
 
-  // Reverse DKP from old member
-  const oldM = members.find(x => x.id === oldMid);
+  // Reverse DKP from old member (mid may be local id or db_id after reload)
+  const oldM = members.find(x => x.id === oldMid || x.db_id === oldMid);
   if (oldM) {
     oldM.dkp += oldDkp;   // give back what was deducted
     if (oldM.db_id) db.updateMemberDkp(oldM.db_id, oldM.dkp);
@@ -1780,7 +1789,7 @@ async function deleteLootLogEntry() {
   if (!l) return;
 
   // Refund DKP to the member
-  const m = members.find(x => x.id === l.mid);
+  const m = members.find(x => x.id === l.mid || x.db_id === l.mid);
   if (m) {
     m.dkp += l.dkp;
     if (m.db_id) db.updateMemberDkp(m.db_id, m.dkp);
@@ -2193,8 +2202,22 @@ function saveMem(){
   if(!d.wx){toast('请填写微信名','err');return;}
   if(editMemId){
     const existing=members.find(x=>x.id===editMemId);
+    const oldDkp = existing.dkp;
     Object.assign(existing,d);
     db.upsertMember(existing);
+    // Log DKP change if it changed
+    if(d.dkp !== oldDkp) {
+      const entry = {
+        member_id: existing.db_id||null, member_name: existing.char||existing.wx,
+        change_type: '手动调整', amount: d.dkp - oldDkp,
+        dkp_before: oldDkp, dkp_after: d.dkp,
+        note: '团员管理弹窗修改', event_name: '',
+      };
+      dkpChangeLog.unshift(entry);
+      if(dkpChangeLog.length>500) dkpChangeLog.pop();
+      db.insertDkpChange(entry);
+      renderDkpChangeLog();
+    }
   } else {
     d.id=uid++;members.push(d);
     db.upsertMember(d); // sets d.db_id
@@ -2435,7 +2458,30 @@ function spUndo() {
   if(!spUndoStack.length) { toast('没有可撤销的操作','err'); return; }
   const {id, field, oldVal} = spUndoStack.pop();
   const m = members.find(x=>x.id===id);
-  if(m) { m[field]=oldVal; renderMembers(); toast('已撤销','ok'); }
+  if(!m) return;
+  const newVal = m[field]; // current value before undo
+  m[field] = oldVal;
+  // Persist to DB
+  clearTimeout(m._saveTimer);
+  m._saveTimer = setTimeout(async () => {
+    await db.upsertMember(m);
+    renderDkp();
+    // Log DKP change if relevant
+    if(field==='dkp') {
+      const entry = {
+        member_id: m.db_id||null, member_name: m.char||m.wx,
+        change_type: '手动调整', amount: (parseInt(oldVal)||0) - (parseInt(newVal)||0),
+        dkp_before: parseInt(newVal)||0, dkp_after: parseInt(oldVal)||0,
+        note: '撤销操作', event_name: '',
+      };
+      dkpChangeLog.unshift(entry);
+      if(dkpChangeLog.length>500) dkpChangeLog.pop();
+      db.insertDkpChange(entry);
+      renderDkpChangeLog();
+    }
+  }, 400);
+  renderMembers();
+  toast('已撤销','ok');
 }
 
 function spSort(field) {
@@ -2921,7 +2967,7 @@ function renderGloot(){
         <th style="color:var(--red)">DKP</th><th>活动</th>
       </tr></thead>
       <tbody>${all.slice(0,60).map(l=>{
-        const m=members.find(x=>x.id===l.mid);
+        const m=members.find(x=>x.id===l.mid||x.db_id===l.mid);
         const qLabel={normal:'勇士',hero:'英雄',epic:'史诗'}[l.q]||l.q;
         const qColor={normal:'#f4e000',hero:'#e84040',epic:'#a335ee'}[l.q]||'var(--muted)';
         const srcLabel = l.source==='type' ? '按类型' : (l.source==='item'?'按装备':'—');
@@ -3248,6 +3294,9 @@ const db = {
   async updateMemberDkp(id, dkp) {
     // id here is db_id
     return await sbFetch(`members?id=eq.${id}`, 'PATCH', { dkp }, 'return=minimal');
+  },
+  async deleteMember(dbId) {
+    return await sbFetch(`members?id=eq.${dbId}`, 'DELETE', null, 'return=minimal');
   },
 
   // ── Events ──
