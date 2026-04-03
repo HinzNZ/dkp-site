@@ -3292,7 +3292,18 @@ const db = {
     return await sbFetch(`dkp_change_log?select=*&order=created_at.desc&limit=${limit}`) || [];
   },
   async insertDkpChange(row) {
-    return await sbFetch('dkp_change_log', 'POST', row, 'return=minimal');
+    // Only send columns that exist in the DB table; exclude local-only fields like 'ts'
+    const payload = {
+      member_id:   row.member_id   || null,
+      member_name: row.member_name || '',
+      change_type: row.change_type || '',
+      amount:      row.amount      || 0,
+      dkp_before:  row.dkp_before  || 0,
+      dkp_after:   row.dkp_after   || 0,
+      note:        row.note        || '',
+      event_name:  row.event_name  || '',
+    };
+    return await sbFetch('dkp_change_log', 'POST', payload, 'return=minimal');
   },
 
   // ── Gear Items (specific loot drops by raid/boss) ──
