@@ -2329,7 +2329,7 @@ function spCommit(id, field, rawVal) {
   if(!m) return;
   let val = rawVal;
   if(field==='dkp') val = parseInt(rawVal)||0;
-  if(m[field] === val) { spActive=null; renderMembers(); return; }
+  if(m[field] === val) { spActive=null; requestAnimationFrame(()=>renderMembers()); return; }
   const oldVal = m[field];
   // Push undo
   spUndoStack.push({id, field, oldVal});
@@ -2365,7 +2365,17 @@ function spCommit(id, field, rawVal) {
     m._saveTimer = setTimeout(()=>{ db.upsertMember(m); renderDkp(); }, 600);
   }
   spActive = null;
-  renderMembers();
+  // Only re-render if no pending navigation (avoids stealing focus mid-edit)
+  // Use requestAnimationFrame so any spClick/Tab navigation sets spActive first
+  requestAnimationFrame(() => {
+    renderMembers();
+    if (spActive) {
+      setTimeout(()=>{
+        const inp = document.getElementById('sp-input');
+        if(inp) { inp.focus(); if(inp.select) inp.select(); }
+      }, 10);
+    }
+  });
 }
 
 function spCommitCurrent() {
@@ -2380,15 +2390,19 @@ function spInputKey(e, id, field) {
   const rowIdx = list.findIndex(m=>m.id===id);
   if(e.key==='Enter' || e.key==='Tab') {
     e.preventDefault();
-    spCommit(id, field, e.target.value);
-    // Move: Tab→right, Enter→down
+    // Set next active cell BEFORE committing so requestAnimationFrame in spCommit picks it up
     if(e.key==='Tab' && !e.shiftKey) {
       const nextCol = SP_COLS[colIdx+1];
-      if(nextCol) { spActive={id,field:nextCol.field}; renderMembers(); setTimeout(()=>{const i=document.getElementById('sp-input');if(i){i.focus();i.select&&i.select();}},20); }
-    } else if(e.key==='Enter' || (e.key==='Tab' && e.shiftKey)) {
-      const nextRow = list[e.shiftKey && e.key==='Tab' ? rowIdx-1 : rowIdx+1];
-      if(nextRow) { spActive={id:nextRow.id,field}; renderMembers(); setTimeout(()=>{const i=document.getElementById('sp-input');if(i){i.focus();i.select&&i.select();}},20); }
+      if(nextCol) spActive={id, field:nextCol.field};
+    } else if(e.key==='Tab' && e.shiftKey) {
+      const nextCol = SP_COLS[colIdx-1];
+      if(nextCol) spActive={id, field:nextCol.field};
+    } else if(e.key==='Enter') {
+      const nextRow = list[rowIdx+1];
+      if(nextRow) spActive={id:nextRow.id, field};
     }
+    spCommit(id, field, e.target.value);
+    // spCommit's requestAnimationFrame will render + focus the new active cell
   } else if(e.key==='Escape') {
     spActive=null; renderMembers();
   }
