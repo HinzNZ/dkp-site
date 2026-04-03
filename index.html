@@ -1165,7 +1165,7 @@ function renderED(id){
     const adminBtns=`<button class="admin-only" onclick="openEditDkpLog(${id},${li})" style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);font-size:10px;padding:2px 8px;border-radius:5px;cursor:pointer;font-family:inherit;flex-shrink:0">编辑</button>`;
     return`<div class="lrow" style="flex-wrap:wrap;gap:6px"><span class="lt" style="flex-shrink:0">${l.time}</span><span class="lw" style="color:var(--green);min-width:60px;flex-shrink:0">+${l.amount}</span><span class="li" style="flex:1;min-width:80px">${l.type}${l.note?' · '+l.note:''}</span><span class="la" style="text-align:right;min-width:100px">${who}</span>${adminBtns}</div>`;
   }).join('');
-  const lRows=e.lootLog.map(l=>{
+  const lRows=e.lootLog.map((l,li)=>{
     const m=members.find(x=>x.id===l.mid);
     const qLabel={normal:'勇士',hero:'英雄',epic:'史诗'}[l.q]||l.q;
     const qColor={normal:'#f4e000',hero:'#e84040',epic:'#a335ee'}[l.q]||'var(--muted)';
@@ -1173,6 +1173,7 @@ function renderED(id){
       ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(74,159,224,.12);color:var(--blue);border:1px solid rgba(74,159,224,.3)">类型</span>`
       : `<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(201,168,76,.1);color:var(--gold);border:1px solid rgba(201,168,76,.3)">装备</span>`;
     const subInfo = l.boss ? `<span style="color:var(--muted);font-size:10px"> · ${l.boss}</span>` : (l.slot?`<span style="color:var(--muted);font-size:10px"> · ${l.slot}</span>`:'');
+    const editBtn = `<button class="admin-only" onclick="openEditLootLog(${id},${li})" style="background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold);font-size:10px;padding:2px 8px;border-radius:5px;cursor:pointer;font-family:inherit;flex-shrink:0">编辑</button>`;
     return`<div class="lrow" style="align-items:flex-start;flex-wrap:wrap;gap:6px">
       <span class="lt" style="flex-shrink:0">${l.time}</span>
       <span class="lw" style="color:${m?clsColor(m.cls):'var(--muted)'};flex-shrink:0">${m?m.char||m.wx:'?'}</span>
@@ -1183,6 +1184,7 @@ function renderED(id){
         ${srcTag}
         <span style="font-size:10px;padding:1px 6px;border-radius:4px;background:${qColor}18;color:${qColor};border:1px solid ${qColor}44">${qLabel}</span>
         <span style="color:var(--red);font-weight:600;min-width:50px;text-align:right">-${l.dkp}</span>
+        ${editBtn}
       </span>
     </div>`;
   }).join('');
@@ -1374,14 +1376,14 @@ function togDkp(id){
   else{dkpSel.push(id);el.classList.add('on');}
   // If manually changed, switch to custom mode label (but keep group for group filters)
 }
-function confirmDkp(){
+async function confirmDkp(){
   const amt=parseInt(gv('dkp-amt'))||0,note=gv('dkp-note');
   const e=events.find(x=>x.id===dkpEvtId);if(!e)return;
   const tgts=dkpSel;
   tgts.forEach(id=>{const m=members.find(x=>x.id===id);if(m){m.dkp+=amt;if(m.db_id)db.updateMemberDkp(m.db_id,m.dkp);}});
   const dlog={type:note||'加分',amount:amt,scope:dkpGroup,members:[...dkpSel],note,time:nowT()};
   e.dkpLog.push(dlog);
-  if(e.db_id) db.insertDkpLog(e.db_id, dlog);
+  if(e.db_id) await db.insertDkpLog(e.db_id, dlog); // await so dlog.db_id is set
   // Log each member's DKP change
   tgts.forEach(id=>{
     const m=members.find(x=>x.id===id);
@@ -1559,7 +1561,8 @@ async function saveEditDkpLog() {
     if (m) { m.dkp += newAmt; if(m.db_id) db.updateMemberDkp(m.db_id, m.dkp); }
   });
 
-  // 4. Update the log object
+  // 4. Update the log object (capture oldAmount before overwriting)
+  const oldAmount = l.amount;
   l.amount  = newAmt;
   l.note    = newNote;
   l.scope   = 'custom';
@@ -1567,12 +1570,15 @@ async function saveEditDkpLog() {
 
   // 5. Persist to DB
   if (l.db_id) {
-    db.updateDkpLog(l.db_id, l);
+    await db.updateDkpLog(l.db_id, l);
+  } else {
+    // No db_id means this log predates db tracking — re-insert it
+    if (e.db_id) await db.insertDkpLog(e.db_id, l);
   }
 
-  // 6. Log DKP changes
+  // 6. Log DKP changes (use oldAmount for removed delta)
   const ts = new Date().toISOString();
-  [...removed.map(id=>({id, delta: -l.amount})), ...added.map(id=>({id, delta: newAmt})), ...(diff!==0?stayed.map(id=>({id, delta: diff})):[]) ].forEach(({id, delta})=>{
+  [...removed.map(id=>({id, delta: -oldAmount})), ...added.map(id=>({id, delta: newAmt})), ...(diff!==0?stayed.map(id=>({id, delta: diff})):[]) ].forEach(({id, delta})=>{
     const m = members.find(x=>x.id===id); if(!m) return;
     const entry = { member_id: m.db_id||null, member_name: m.char||m.wx, change_type: '手动调整', amount: delta, dkp_before: m.dkp-delta, dkp_after: m.dkp, note: `编辑DKP记录: ${newType}`, event_name: e.name||'', ts };
     dkpChangeLog.unshift(entry);
@@ -1599,23 +1605,202 @@ async function deleteDkpLogEntry() {
              : l.scope==='main' ? [...e.roster]
              : l.scope==='sub'  ? [...(e.rosterSubs||[])]
              : [...(l.members||[])];
+  const ts = new Date().toISOString();
   mems.forEach(id => {
     const m = members.find(x => x.id === id);
-    if (m) { m.dkp -= l.amount; if(m.db_id) db.updateMemberDkp(m.db_id, m.dkp); }
+    if (!m) return;
+    m.dkp -= l.amount;
+    if(m.db_id) db.updateMemberDkp(m.db_id, m.dkp);
+    const entry = {
+      member_id: m.db_id||null, member_name: m.char||m.wx,
+      change_type: '手动调整', amount: -l.amount,
+      dkp_before: m.dkp + l.amount, dkp_after: m.dkp,
+      note: `删除DKP记录: ${l.type||'加分'}`, event_name: e.name||'', ts,
+    };
+    dkpChangeLog.unshift(entry);
+    db.insertDkpChange(entry);
   });
+  if(dkpChangeLog.length > 500) dkpChangeLog.length = 500;
 
   // Delete from DB
-  if (l.db_id) db.deleteDkpLog(l.db_id);
+  if (l.db_id) await db.deleteDkpLog(l.db_id);
 
   // Remove from local array
   e.dkpLog.splice(edlLogIdx, 1);
 
+  renderDkpChangeLog();
   closeMo('mo-edit-dkplog');
   renderED(edlEvtId);
   renderDkp();
   toast('DKP记录已删除，积分已扣回', 'ok');
 }
 
+
+// ══ EDIT LOOT LOG ══
+let ellEvtId   = null;
+let ellLogIdx  = null;
+let ellSelMid  = null;   // selected member id
+let ellQual    = 'normal';
+
+function openEditLootLog(evtId, logIdx) {
+  const e = events.find(x => x.id === evtId);
+  if (!e) return;
+  const l = e.lootLog[logIdx];
+  if (!l) return;
+  ellEvtId  = evtId;
+  ellLogIdx = logIdx;
+  ellSelMid = l.mid;
+  ellQual   = l.q || 'normal';
+
+  document.getElementById('ell-item').value = l.item || '';
+  document.getElementById('ell-dkp').value  = l.dkp  || 0;
+
+  // Quality buttons
+  ellSetQual(ellQual, null);
+
+  // Member picker — all roster + subs
+  if(!e.rosterSubs) e.rosterSubs = [];
+  const allIds = [...e.roster, ...e.rosterSubs];
+  const subSet = new Set(e.rosterSubs);
+  document.getElementById('ell-pk').innerHTML = allIds.map(i => {
+    const m = members.find(x => x.id === i); if (!m) return '';
+    const on = (ellSelMid === i);
+    const groupLabel = subSet.has(i) ? '替补' : '主力';
+    return `<div class="pcard${on?' on':''}" id="ellp-${m.id}" onclick="ellSelMember(${m.id})">
+      <div class="pc-n" style="color:${clsColor(m.cls)};font-weight:600">${m.char||m.wx}</div>
+      <div class="pc-d" style="color:${clsColor(m.cls)}66;font-size:10px">${m.cls} · ${groupLabel}</div>
+    </div>`;
+  }).join('');
+
+  openMo('mo-edit-lootlog');
+}
+
+function ellSelMember(id) {
+  // Deselect previous
+  if (ellSelMid !== null) document.getElementById(`ellp-${ellSelMid}`)?.classList.remove('on');
+  ellSelMid = id;
+  document.getElementById(`ellp-${id}`)?.classList.add('on');
+}
+
+function ellSetQual(qual, btn) {
+  ellQual = qual;
+  const colors = {
+    normal: ['#f4e000','rgba(244,224,0,.5)','rgba(244,224,0,.1)'],
+    hero:   ['#e84040','rgba(232,64,64,.5)','rgba(232,64,64,.1)'],
+    epic:   ['#a335ee','rgba(163,53,238,.5)','rgba(163,53,238,.1)'],
+  };
+  document.querySelectorAll('.ell-qual-btn').forEach(b => {
+    const q = b.dataset.qual;
+    const [col, bord, bg] = colors[q] || colors.normal;
+    if (q === qual) {
+      b.style.color = col; b.style.borderColor = bord; b.style.background = bg;
+    } else {
+      b.style.color = 'var(--muted)';
+      b.style.borderColor = colors[q][1].replace('.5','0.25');
+      b.style.background = 'transparent';
+    }
+  });
+}
+
+async function saveEditLootLog() {
+  const e = events.find(x => x.id === ellEvtId);
+  if (!e) return;
+  const l = e.lootLog[ellLogIdx];
+  if (!l) return;
+
+  const newItem = document.getElementById('ell-item').value.trim();
+  const newDkp  = parseInt(document.getElementById('ell-dkp').value) || 0;
+  if (!newItem) { toast('请填写装备名称', 'err'); return; }
+  if (!ellSelMid) { toast('请选择团员', 'err'); return; }
+
+  const oldMid = l.mid;
+  const oldDkp = l.dkp;
+
+  // Reverse DKP from old member
+  const oldM = members.find(x => x.id === oldMid);
+  if (oldM) {
+    oldM.dkp += oldDkp;   // give back what was deducted
+    if (oldM.db_id) db.updateMemberDkp(oldM.db_id, oldM.dkp);
+  }
+
+  // Apply new DKP deduction to new member
+  const newM = members.find(x => x.id === ellSelMid);
+  if (newM) {
+    newM.dkp -= newDkp;
+    if (newM.db_id) db.updateMemberDkp(newM.db_id, newM.dkp);
+  }
+
+  // Update log object
+  l.mid         = ellSelMid;
+  l.member_db_id = newM?.db_id || null;
+  l.item        = newItem;
+  l.dkp         = newDkp;
+  l.q           = ellQual;
+
+  // Persist to DB
+  if (l.db_id) {
+    await db.updateLootLog(l.db_id, l);
+  } else {
+    // No db_id — re-insert (log predates db tracking)
+    if (e.db_id) await db.insertLootLog(e.db_id, l);
+  }
+
+  // Log DKP changes
+  const ts = new Date().toISOString();
+  if (oldMid !== ellSelMid) {
+    // Two changes: give back to old, deduct from new
+    if (oldM) {
+      const en = { member_id: oldM.db_id||null, member_name: oldM.char||oldM.wx, change_type: '手动调整', amount: oldDkp, dkp_before: oldM.dkp-oldDkp, dkp_after: oldM.dkp, note: `编辑装备记录退还: ${newItem}`, event_name: e.name||'', ts };
+      dkpChangeLog.unshift(en); db.insertDkpChange(en);
+    }
+    if (newM) {
+      const en = { member_id: newM.db_id||null, member_name: newM.char||newM.wx, change_type: '分配装备', amount: -newDkp, dkp_before: newM.dkp+newDkp, dkp_after: newM.dkp, note: `编辑装备记录: ${newItem}`, event_name: e.name||'', ts };
+      dkpChangeLog.unshift(en); db.insertDkpChange(en);
+    }
+  } else if (oldDkp !== newDkp && newM) {
+    // Same person, different DKP
+    const diff = newDkp - oldDkp;
+    const en = { member_id: newM.db_id||null, member_name: newM.char||newM.wx, change_type: '手动调整', amount: -diff, dkp_before: newM.dkp+diff, dkp_after: newM.dkp, note: `编辑装备DKP: ${newItem}`, event_name: e.name||'', ts };
+    dkpChangeLog.unshift(en); db.insertDkpChange(en);
+  }
+  if (dkpChangeLog.length > 500) dkpChangeLog.length = 500;
+
+  renderDkpChangeLog();
+  closeMo('mo-edit-lootlog');
+  renderED(ellEvtId);
+  renderDkp();
+  toast('装备记录已更新 ✓', 'ok');
+}
+
+async function deleteLootLogEntry() {
+  if (!confirm('确定删除这条装备记录？\n已扣的DKP将退还给该团员。')) return;
+  const e = events.find(x => x.id === ellEvtId);
+  if (!e) return;
+  const l = e.lootLog[ellLogIdx];
+  if (!l) return;
+
+  // Refund DKP to the member
+  const m = members.find(x => x.id === l.mid);
+  if (m) {
+    m.dkp += l.dkp;
+    if (m.db_id) db.updateMemberDkp(m.db_id, m.dkp);
+    const en = { member_id: m.db_id||null, member_name: m.char||m.wx, change_type: '手动调整', amount: l.dkp, dkp_before: m.dkp-l.dkp, dkp_after: m.dkp, note: `删除装备记录退还: ${l.item}`, event_name: e.name||'', ts: new Date().toISOString() };
+    dkpChangeLog.unshift(en); db.insertDkpChange(en);
+    if (dkpChangeLog.length > 500) dkpChangeLog.length = 500;
+  }
+
+  // Delete from DB
+  if (l.db_id) await db.deleteLootLog(l.db_id);
+
+  // Remove from local array
+  e.lootLog.splice(ellLogIdx, 1);
+
+  renderDkpChangeLog();
+  closeMo('mo-edit-lootlog');
+  renderED(ellEvtId);
+  renderDkp();
+  toast('装备记录已删除，DKP已退还', 'ok');
+}
 
 let lootSelItem = null;   // selected gear_item object
 let lootSelRaid = null;
@@ -1932,7 +2117,7 @@ function selectLootType(gearTypeId) {
   selectLootQual('normal', document.querySelector('.loot-qual-btn[data-qual="normal"]'));
 }
 
-function confirmLoot(){
+async function confirmLoot(){
   let targetMemberId, dkp, item, q;
   if(lootMode==='type') {
     // Type mode
@@ -1969,10 +2154,8 @@ function confirmLoot(){
     slot:   lootMode==='item' ? (lootSelItem?.slot||'')  : (lootSelGearType?.name||''),
   };
   e?.lootLog.push(llog);
-  if(e?.db_id){
-    db.insertLootLog(e.db_id, llog);
-    if(m.db_id) db.updateMemberDkp(m.db_id, m.dkp);
-  }
+  if(m.db_id) db.updateMemberDkp(m.db_id, m.dkp);
+  if(e?.db_id) await db.insertLootLog(e.db_id, llog); // await so llog.db_id is set
   // Log DKP change from loot
   if(dkp > 0) {
     const lootEntry = {
@@ -2155,25 +2338,32 @@ function spCommit(id, field, rawVal) {
   // If DKP changed, log it
   if(field==='dkp') {
     const diff = val - (parseInt(oldVal)||0);
-    const entry = {
-      member_id: m.db_id||null,
-      member_name: m.char||m.wx,
-      change_type: '手动调整',
-      amount: diff,
-      dkp_before: parseInt(oldVal)||0,
-      dkp_after: val,
-      note: '团员管理页手动修改',
-      event_name: '',
-      ts: new Date().toISOString(),
-    };
-    dkpChangeLog.unshift(entry);
-    if(dkpChangeLog.length > 500) dkpChangeLog.pop();
-    db.insertDkpChange(entry);
-    renderDkpChangeLog();
+    // Debounce: save member first, then log DKP change so member_id is set
+    clearTimeout(m._saveTimer);
+    m._saveTimer = setTimeout(async ()=>{
+      await db.upsertMember(m); // ensures m.db_id is set before logging
+      renderDkp();
+      const entry = {
+        member_id: m.db_id||null,
+        member_name: m.char||m.wx,
+        change_type: '手动调整',
+        amount: diff,
+        dkp_before: parseInt(oldVal)||0,
+        dkp_after: val,
+        note: '团员管理页手动修改',
+        event_name: '',
+        ts: new Date().toISOString(),
+      };
+      dkpChangeLog.unshift(entry);
+      if(dkpChangeLog.length > 500) dkpChangeLog.pop();
+      db.insertDkpChange(entry);
+      renderDkpChangeLog();
+    }, 600);
+  } else {
+    // Non-DKP field: just debounce save
+    clearTimeout(m._saveTimer);
+    m._saveTimer = setTimeout(()=>{ db.upsertMember(m); renderDkp(); }, 600);
   }
-  // DB save with debounce
-  clearTimeout(m._saveTimer);
-  m._saveTimer = setTimeout(()=>{ db.upsertMember(m); renderDkp(); }, 600);
   spActive = null;
   renderMembers();
 }
@@ -3128,7 +3318,25 @@ const db = {
       raid: log.raid||'',
       slot: log.slot||'',
     };
-    return await sbFetch('loot_logs', 'POST', row, 'return=minimal');
+    const res = await sbFetch('loot_logs', 'POST', row, 'return=representation');
+    if(res && res[0]) { log.db_id = res[0].id; return res[0]; }
+    return null;
+  },
+  async updateLootLog(dbId, log) {
+    const row = {
+      member_id: log.member_db_id||null,
+      item: log.item||'',
+      quality: log.q||'normal',
+      dkp: log.dkp||0,
+      source_type: log.source||'item',
+      boss: log.boss||'',
+      raid: log.raid||'',
+      slot: log.slot||'',
+    };
+    return await sbFetch(`loot_logs?id=eq.${dbId}`, 'PATCH', row, 'return=minimal');
+  },
+  async deleteLootLog(dbId) {
+    return await sbFetch(`loot_logs?id=eq.${dbId}`, 'DELETE', null, 'return=minimal');
   },
 
   // ── Gear Types ──
@@ -3173,7 +3381,9 @@ function rowToDkpLog(r) {
 }
 function rowToLootLog(r) {
   return {
+    db_id: r.id,
     mid: r.member_id,
+    member_db_id: r.member_id,
     item: r.item,
     q: r.quality,
     dkp: r.dkp,
@@ -3475,6 +3685,41 @@ console.log('AT Guild DKP ready. Waiting for login...');
     <button class="btn btn-red btn-sm" onclick="deleteDkpLogEntry()" style="margin-right:auto">🗑 删除此记录</button>
     <button class="btn btn-outline" onclick="closeMo('mo-edit-dkplog')">取消</button>
     <button class="btn btn-gold" onclick="saveEditDkpLog()">✓ 保存修改</button>
+  </div>
+</div></div>
+
+<!-- EDIT LOOT LOG MODAL -->
+<div class="mo" id="mo-edit-lootlog"><div class="md" style="width:560px">
+  <div class="md-title">✏️ 编辑装备记录</div>
+  <div class="fg" style="margin-bottom:13px">
+    <label class="fl">装备名称</label>
+    <input class="fi" id="ell-item" placeholder="装备名称">
+  </div>
+  <div class="mg2" style="margin-bottom:13px">
+    <div class="fg">
+      <label class="fl">品质 / 难度</label>
+      <div style="display:flex;gap:6px">
+        <button class="ell-qual-btn" data-qual="normal" onclick="ellSetQual('normal',this)"
+          style="flex:1;padding:7px 4px;border-radius:7px;border:1px solid rgba(244,224,0,.5);background:rgba(244,224,0,.1);color:#f4e000;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:.15s">勇士</button>
+        <button class="ell-qual-btn" data-qual="hero" onclick="ellSetQual('hero',this)"
+          style="flex:1;padding:7px 4px;border-radius:7px;border:1px solid rgba(232,64,64,.3);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:.15s">英雄</button>
+        <button class="ell-qual-btn" data-qual="epic" onclick="ellSetQual('epic',this)"
+          style="flex:1;padding:7px 4px;border-radius:7px;border:1px solid rgba(163,53,238,.3);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:.15s">史诗</button>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">扣除DKP</label>
+      <input class="fi" type="number" id="ell-dkp">
+    </div>
+  </div>
+  <div class="fg" style="margin-bottom:13px">
+    <label class="fl">获得装备的团员</label>
+    <div class="mpk" id="ell-pk" style="max-height:220px"></div>
+  </div>
+  <div class="md-footer">
+    <button class="btn btn-red btn-sm" onclick="deleteLootLogEntry()" style="margin-right:auto">🗑 删除此记录</button>
+    <button class="btn btn-outline" onclick="closeMo('mo-edit-lootlog')">取消</button>
+    <button class="btn btn-gold" onclick="saveEditLootLog()">✓ 保存修改</button>
   </div>
 </div></div>
 </body>
