@@ -1332,7 +1332,7 @@ function renderDkpPicker(e){
   const mainIds=e.roster;
   const subIds=e.rosterSubs;
   const allIds=[...mainIds,...subIds];
-  // Build sections: main group then sub group
+  // Build sections: main group then sub group (cards go directly into outer grid)
   const buildCards=(ids, label, color)=>{
     if(!ids.length) return '';
     const cards=ids.map(i=>{
@@ -1343,12 +1343,12 @@ function renderDkpPicker(e){
         <div class="pc-d" style="color:${clsColor(m.cls)}66;font-size:10px">${m.cls} · ${m.dkp} DKP</div>
       </div>`;
     }).join('');
-    return `<div style="font-size:10px;color:${color};letter-spacing:1px;margin:8px 0 5px;font-weight:700">${label} (${ids.length})</div><div class="mpk" style="max-height:none">${cards}</div>`;
+    return `<div style="font-size:10px;color:${color};letter-spacing:1px;margin:8px 0 5px;font-weight:700;grid-column:1/-1">${label} (${ids.length})</div>${cards}`;
   };
   let html='';
   if(mainIds.length) html+=buildCards(mainIds,'🗡️ 主力','var(--gold)');
   if(subIds.length) html+=buildCards(subIds,'🔄 替补','var(--blue)');
-  if(!allIds.length) html='<div style="color:var(--muted);padding:10px;text-align:center;font-size:12px">暂无出席团员</div>';
+  if(!allIds.length) html='<div style="color:var(--muted);padding:10px;text-align:center;font-size:12px;grid-column:1/-1">暂无出席团员</div>';
   document.getElementById('dkp-pk').innerHTML=html;
 }
 
