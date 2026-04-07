@@ -575,7 +575,10 @@ body.viewer-mode .admin-only{display:none!important}
   <div style="display:grid;grid-template-columns:1fr 380px;gap:18px;align-items:start">
     <!-- Left: leaderboard -->
     <div>
-      <div class="stitle" style="font-size:10px;margin-bottom:10px">DKP 排行榜</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div class="stitle" style="font-size:10px;margin:0;flex:1">DKP 排行榜</div>
+        <button class="btn btn-outline btn-sm admin-only" onclick="openModifyDkpMo(null)" style="border-color:rgba(160,110,224,.5);color:var(--purple)">✏️ 一键修改DKP</button>
+      </div>
       <div class="tb-wrap"><table>
         <thead><tr><th>排名</th><th>角色名</th><th>职业</th><th>职责</th><th>当前DKP</th><th>状态</th></tr></thead>
         <tbody id="dkp-tbody"></tbody>
@@ -791,6 +794,100 @@ body.viewer-mode .admin-only{display:none!important}
   <div class="md-footer">
     <button class="btn btn-outline" onclick="closeMo('mo-dkp')">取消</button>
     <button class="btn btn-green" onclick="confirmDkp()">✓ 确认加分</button>
+  </div>
+</div></div>
+
+<!-- MODIFY DKP MODAL -->
+<div class="mo" id="mo-modify-dkp"><div class="md" style="width:620px">
+  <div class="md-title">✏️ 一键修改DKP</div>
+
+  <!-- 操作类型 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+    <button id="mdkp-mode-fixed" onclick="mdkpSetMode('fixed')"
+      style="padding:10px 0;border-radius:9px;border:2px solid var(--gold);background:rgba(201,168,76,.12);color:var(--gold);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;transition:.15s">
+      ± 固定数值<div style="font-size:10px;font-weight:400;color:var(--muted);margin-top:2px">直接加减指定DKP</div>
+    </button>
+    <button id="mdkp-mode-pct" onclick="mdkpSetMode('pct')"
+      style="padding:10px 0;border-radius:9px;border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;transition:.15s">
+      % 百分比<div style="font-size:10px;font-weight:400;color:var(--muted);margin-top:2px">按当前DKP百分比变动</div>
+    </button>
+  </div>
+
+  <!-- 固定数值面板 -->
+  <div id="mdkp-panel-fixed" style="margin-bottom:14px">
+    <div class="mg2">
+      <div class="fg">
+        <label class="fl">操作</label>
+        <div style="display:flex;gap:6px">
+          <button id="mdkp-op-add" onclick="mdkpSetOp('add')"
+            style="flex:1;padding:7px;border-radius:7px;border:1px solid rgba(74,170,128,.5);background:rgba(74,170,128,.12);color:var(--green);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;transition:.15s">＋ 加分</button>
+          <button id="mdkp-op-sub" onclick="mdkpSetOp('sub')"
+            style="flex:1;padding:7px;border-radius:7px;border:1px solid rgba(208,80,80,.3);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;transition:.15s">－ 减分</button>
+          <button id="mdkp-op-set" onclick="mdkpSetOp('set')"
+            style="flex:1;padding:7px;border-radius:7px;border:1px solid rgba(74,159,224,.3);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;transition:.15s">= 设置</button>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">DKP数值</label>
+        <input class="fi" type="number" id="mdkp-fixed-val" value="10" min="0" oninput="mdkpUpdatePreview()">
+      </div>
+    </div>
+  </div>
+
+  <!-- 百分比面板 -->
+  <div id="mdkp-panel-pct" style="display:none;margin-bottom:14px">
+    <div class="mg2">
+      <div class="fg">
+        <label class="fl">操作</label>
+        <div style="display:flex;gap:6px">
+          <button id="mdkp-pct-op-add" onclick="mdkpSetPctOp('add')"
+            style="flex:1;padding:7px;border-radius:7px;border:1px solid rgba(74,170,128,.5);background:rgba(74,170,128,.12);color:var(--green);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;transition:.15s">＋ 增加%</button>
+          <button id="mdkp-pct-op-sub" onclick="mdkpSetPctOp('sub')"
+            style="flex:1;padding:7px;border-radius:7px;border:1px solid rgba(208,80,80,.3);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;transition:.15s">－ 减少%</button>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">百分比</label>
+        <div style="position:relative">
+          <input class="fi" type="number" id="mdkp-pct-val" value="10" min="0" max="999" style="padding-right:32px" oninput="mdkpUpdatePreview()">
+          <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none">%</span>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;padding:8px 10px;background:var(--bg-card2);border-radius:7px;border:1px solid var(--border)">
+      💡 百分比计算结果会<b style="color:var(--text)">四舍五入</b>取整，不足1DKP按1计算
+    </div>
+  </div>
+
+  <!-- 备注 -->
+  <div class="fg" style="margin-bottom:14px">
+    <label class="fl">备注</label>
+    <input class="fi" id="mdkp-note" placeholder="可选备注（如：惩罚扣分、补偿加分…）">
+  </div>
+
+  <!-- 应用对象 -->
+  <div class="fg" style="margin-bottom:8px">
+    <label class="fl">应用对象</label>
+    <div class="pbs" style="margin-bottom:8px" id="mdkp-group-btns">
+      <button class="pb on" id="mdkp-grp-all"    onclick="mdkpSetGroup('all')">全体</button>
+      <button class="pb"    id="mdkp-grp-main"   onclick="mdkpSetGroup('main')">仅主力</button>
+      <button class="pb"    id="mdkp-grp-sub"    onclick="mdkpSetGroup('sub')">仅替补</button>
+      <button class="pb"    id="mdkp-grp-custom" onclick="mdkpSetGroup('custom')">自定义</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px" id="mdkp-scope-hint">全选全体团员，可点击单独取消</div>
+  </div>
+  <div style="margin-bottom:14px">
+    <div class="mpk" id="mdkp-pk"></div>
+  </div>
+
+  <!-- 预览 -->
+  <div id="mdkp-preview" style="font-size:12px;color:var(--muted);padding:10px 14px;background:var(--bg-card2);border:1px solid var(--border);border-radius:8px;margin-bottom:4px;line-height:1.8;display:none"></div>
+
+  <div class="md-footer">
+    <button class="btn btn-outline" onclick="closeMo('mo-modify-dkp')">取消</button>
+    <button class="btn btn-sm" id="mdkp-confirm-btn"
+      style="background:rgba(160,110,224,.18);border:1px solid rgba(160,110,224,.5);color:var(--purple);font-weight:700;padding:8px 20px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px"
+      onclick="confirmModifyDkp()">✓ 确认修改</button>
   </div>
 </div></div>
 
@@ -1210,6 +1307,7 @@ function renderED(id){
       </div>
       <div class="ed-acts">
         <button class="btn btn-green btn-sm admin-only" onclick="openDkpMo(${id})">⚡ 一键加DKP</button>
+        <button class="btn btn-sm admin-only" onclick="openModifyDkpMo(${id})" style="background:rgba(160,110,224,.15);border:1px solid rgba(160,110,224,.4);color:var(--purple)">✏️ 一键修改DKP</button>
         <button class="btn btn-blue btn-sm admin-only" onclick="openLootMo(${id})">🎁 分配装备</button>
         <button class="btn btn-outline btn-sm admin-only" onclick="toggleStatus(${id})">${e.status==='completed'?'↩ 重新开放':'✓ 标记完成'}</button>
         <button class="btn btn-red btn-sm admin-only" onclick="deleteEvent(${id})">🗑 删除活动</button>
@@ -1412,6 +1510,247 @@ async function confirmDkp(){
   });
   renderDkpChangeLog();
   closeMo('mo-dkp');renderED(dkpEvtId);toast(`已为 ${tgts.length} 人加 ${amt} DKP ✨`,'ok');
+}
+
+// ══ MODIFY DKP (bulk) ══
+let mdkpEvtId = null;   // null = global (DKP page), otherwise event id
+let mdkpSel = [];
+let mdkpGroup = 'all';
+let mdkpMode = 'fixed'; // 'fixed' | 'pct'
+let mdkpOp = 'add';     // 'add' | 'sub' | 'set'
+let mdkpPctOp = 'add';  // 'add' | 'sub'
+
+function openModifyDkpMo(evtId) {
+  mdkpEvtId = evtId;
+  mdkpMode = 'fixed'; mdkpOp = 'add'; mdkpPctOp = 'add'; mdkpGroup = 'all'; mdkpSel = [];
+  document.getElementById('mdkp-fixed-val').value = 10;
+  document.getElementById('mdkp-pct-val').value = 10;
+  document.getElementById('mdkp-note').value = '';
+  document.getElementById('mdkp-preview').style.display = 'none';
+
+  // Build member pool
+  const pool = mdkpGetPool();
+  mdkpSel = pool.map(m => m.id);
+
+  mdkpSetMode('fixed');
+  mdkpSetOp('add');
+  mdkpSetPctOp('add');
+
+  // Show/hide group filter buttons based on context
+  const grpBtns = document.getElementById('mdkp-group-btns');
+  if (evtId !== null) {
+    grpBtns.style.display = 'flex';
+  } else {
+    // Global mode: only show all / custom (no main/sub context)
+    grpBtns.style.display = 'flex';
+  }
+  mdkpSetGroup('all');
+  renderModifyDkpPicker();
+  openMo('mo-modify-dkp');
+}
+
+function mdkpGetPool() {
+  if (mdkpEvtId !== null) {
+    const e = events.find(x => x.id === mdkpEvtId);
+    if (!e) return [];
+    if (!e.rosterSubs) e.rosterSubs = [];
+    if (mdkpGroup === 'main') return e.roster.map(i => members.find(x => x.id === i)).filter(Boolean);
+    if (mdkpGroup === 'sub')  return e.rosterSubs.map(i => members.find(x => x.id === i)).filter(Boolean);
+    const all = [...e.roster, ...e.rosterSubs];
+    return all.map(i => members.find(x => x.id === i)).filter(Boolean);
+  } else {
+    // All active members
+    return members.filter(m => m.st !== '长期请假' && m.st !== '缺席');
+  }
+}
+
+function mdkpSetMode(mode) {
+  mdkpMode = mode;
+  const btnFixed = document.getElementById('mdkp-mode-fixed');
+  const btnPct   = document.getElementById('mdkp-mode-pct');
+  const panFixed = document.getElementById('mdkp-panel-fixed');
+  const panPct   = document.getElementById('mdkp-panel-pct');
+  if (mode === 'fixed') {
+    btnFixed.style.borderColor='var(--gold)'; btnFixed.style.background='rgba(201,168,76,.12)'; btnFixed.style.color='var(--gold)';
+    btnPct.style.borderColor='var(--border)'; btnPct.style.background='transparent'; btnPct.style.color='var(--muted)';
+    panFixed.style.display=''; panPct.style.display='none';
+  } else {
+    btnPct.style.borderColor='var(--gold)'; btnPct.style.background='rgba(201,168,76,.12)'; btnPct.style.color='var(--gold)';
+    btnFixed.style.borderColor='var(--border)'; btnFixed.style.background='transparent'; btnFixed.style.color='var(--muted)';
+    panPct.style.display=''; panFixed.style.display='none';
+  }
+  mdkpUpdatePreview();
+}
+
+function mdkpSetOp(op) {
+  mdkpOp = op;
+  const colors = { add:['rgba(74,170,128,.5)','rgba(74,170,128,.12)','var(--green)'], sub:['rgba(208,80,80,.5)','rgba(208,80,80,.12)','var(--red)'], set:['rgba(74,159,224,.5)','rgba(74,159,224,.12)','var(--blue)'] };
+  ['add','sub','set'].forEach(o => {
+    const btn = document.getElementById('mdkp-op-'+o);
+    if (!btn) return;
+    if (o === op) { btn.style.borderColor=colors[o][0]; btn.style.background=colors[o][1]; btn.style.color=colors[o][2]; }
+    else { btn.style.borderColor='rgba(138,128,112,.25)'; btn.style.background='transparent'; btn.style.color='var(--muted)'; }
+  });
+  mdkpUpdatePreview();
+}
+
+function mdkpSetPctOp(op) {
+  mdkpPctOp = op;
+  const colors = { add:['rgba(74,170,128,.5)','rgba(74,170,128,.12)','var(--green)'], sub:['rgba(208,80,80,.5)','rgba(208,80,80,.12)','var(--red)'] };
+  ['add','sub'].forEach(o => {
+    const btn = document.getElementById('mdkp-pct-op-'+o);
+    if (!btn) return;
+    if (o === op) { btn.style.borderColor=colors[o][0]; btn.style.background=colors[o][1]; btn.style.color=colors[o][2]; }
+    else { btn.style.borderColor='rgba(138,128,112,.25)'; btn.style.background='transparent'; btn.style.color='var(--muted)'; }
+  });
+  mdkpUpdatePreview();
+}
+
+function mdkpSetGroup(group) {
+  mdkpGroup = group;
+  ['all','main','sub','custom'].forEach(g => {
+    document.getElementById('mdkp-grp-'+g)?.classList.toggle('on', g === group);
+  });
+  const hints = { all:'全选全体团员，可点击单独取消', main:'仅选主力团员，可点击单独调整', sub:'仅选替补团员，可点击单独调整', custom:'自定义选择，点击卡片勾选/取消' };
+  document.getElementById('mdkp-scope-hint').textContent = hints[group] || '';
+
+  if (mdkpEvtId !== null) {
+    const e = events.find(x => x.id === mdkpEvtId);
+    if (!e) return;
+    if (!e.rosterSubs) e.rosterSubs = [];
+    if (group === 'all')    mdkpSel = [...e.roster, ...e.rosterSubs];
+    else if (group === 'main') mdkpSel = [...e.roster];
+    else if (group === 'sub')  mdkpSel = [...e.rosterSubs];
+    else if (group === 'custom') mdkpSel = [];
+  } else {
+    const pool = mdkpGetPool();
+    if (group === 'custom') mdkpSel = [];
+    else mdkpSel = pool.map(m => m.id);
+  }
+  renderModifyDkpPicker();
+  mdkpUpdatePreview();
+}
+
+function renderModifyDkpPicker() {
+  let pool;
+  if (mdkpEvtId !== null) {
+    const e = events.find(x => x.id === mdkpEvtId);
+    if (!e) return;
+    if (!e.rosterSubs) e.rosterSubs = [];
+    const mainIds = e.roster;
+    const subIds  = e.rosterSubs;
+
+    const buildSection = (ids, label, color) => {
+      if (!ids.length) return '';
+      const cards = ids.map(i => {
+        const m = members.find(x => x.id === i); if (!m) return '';
+        const on = mdkpSel.includes(i);
+        return `<div class="pcard${on?' on':''}" id="mdp-${m.id}" onclick="togMdkp(${m.id})">
+          <div class="pc-n" style="color:${clsColor(m.cls)};font-weight:600">${m.char||m.wx}</div>
+          <div class="pc-d" style="color:${clsColor(m.cls)}66;font-size:10px">${m.cls} · ${m.dkp} DKP</div>
+        </div>`;
+      }).join('');
+      return `<div style="font-size:10px;color:${color};letter-spacing:1px;margin:8px 0 5px;font-weight:700;grid-column:1/-1">${label} (${ids.length})</div>${cards}`;
+    };
+    document.getElementById('mdkp-pk').innerHTML =
+      buildSection(mainIds, '🗡️ 主力', 'var(--gold)') +
+      buildSection(subIds,  '🔄 替补', 'var(--blue)') ||
+      '<div style="color:var(--muted);padding:10px;text-align:center;grid-column:1/-1">暂无出席团员</div>';
+  } else {
+    // Global: show all active members
+    pool = members.filter(m => m.st !== '长期请假' && m.st !== '缺席');
+    if (!pool.length) {
+      document.getElementById('mdkp-pk').innerHTML = '<div style="color:var(--muted);padding:10px;text-align:center;grid-column:1/-1">暂无团员</div>';
+      return;
+    }
+    const cards = pool.map(m => {
+      const on = mdkpSel.includes(m.id);
+      return `<div class="pcard${on?' on':''}" id="mdp-${m.id}" onclick="togMdkp(${m.id})">
+        <div class="pc-n" style="color:${clsColor(m.cls)};font-weight:600">${m.char||m.wx}</div>
+        <div class="pc-d" style="color:${clsColor(m.cls)}66;font-size:10px">${m.cls} · ${m.dkp} DKP</div>
+      </div>`;
+    }).join('');
+    document.getElementById('mdkp-pk').innerHTML = cards;
+  }
+  mdkpUpdatePreview();
+}
+
+function togMdkp(id) {
+  const el = document.getElementById(`mdp-${id}`);
+  if (mdkpSel.includes(id)) { mdkpSel = mdkpSel.filter(x => x !== id); el?.classList.remove('on'); }
+  else { mdkpSel.push(id); el?.classList.add('on'); }
+  mdkpUpdatePreview();
+}
+
+function mdkpCalcDelta(currentDkp) {
+  if (mdkpMode === 'fixed') {
+    const val = parseInt(document.getElementById('mdkp-fixed-val').value) || 0;
+    if (mdkpOp === 'add') return val;
+    if (mdkpOp === 'sub') return -val;
+    if (mdkpOp === 'set') return val - currentDkp;
+  } else {
+    const pct = parseFloat(document.getElementById('mdkp-pct-val').value) || 0;
+    const raw = Math.round(currentDkp * pct / 100);
+    const change = raw === 0 && pct > 0 ? (mdkpPctOp === 'sub' ? -1 : 1) : raw;
+    return mdkpPctOp === 'sub' ? -Math.abs(change) : Math.abs(change);
+  }
+}
+
+function mdkpUpdatePreview() {
+  const preview = document.getElementById('mdkp-preview');
+  if (!mdkpSel.length) { preview.style.display = 'none'; return; }
+  const sample = mdkpSel.slice(0, 3).map(id => {
+    const m = members.find(x => x.id === id); if (!m) return '';
+    const delta = mdkpCalcDelta(m.dkp);
+    const after = m.dkp + delta;
+    const color = delta >= 0 ? 'var(--green)' : 'var(--red)';
+    const sign  = delta >= 0 ? '+' : '';
+    return `<span style="color:${clsColor(m.cls)}">${m.char||m.wx}</span>: ${m.dkp} → <b style="color:${color}">${after}</b> <span style="color:${color};font-size:10px">(${sign}${delta})</span>`;
+  }).filter(Boolean).join(' &nbsp;·&nbsp; ');
+  const more = mdkpSel.length > 3 ? ` <span style="color:var(--muted)">…共 ${mdkpSel.length} 人</span>` : ` <span style="color:var(--muted)">(共 ${mdkpSel.length} 人)</span>`;
+  preview.style.display = '';
+  preview.innerHTML = `<span style="color:var(--gold);font-size:10px;letter-spacing:1px;font-weight:700">预览</span>&nbsp; ${sample}${more}`;
+}
+
+async function confirmModifyDkp() {
+  if (!mdkpSel.length) { toast('请至少选择一名团员', 'err'); return; }
+  const note = document.getElementById('mdkp-note').value.trim();
+  let label = '';
+  if (mdkpMode === 'fixed') {
+    const val = parseInt(document.getElementById('mdkp-fixed-val').value) || 0;
+    if (val === 0) { toast('请填写DKP数值', 'err'); return; }
+    label = mdkpOp === 'add' ? `手动加分 +${val}` : mdkpOp === 'sub' ? `手动减分 -${val}` : `设置DKP = ${val}`;
+  } else {
+    const pct = parseFloat(document.getElementById('mdkp-pct-val').value) || 0;
+    if (pct === 0) { toast('请填写百分比', 'err'); return; }
+    label = mdkpPctOp === 'add' ? `百分比加分 +${pct}%` : `百分比减分 -${pct}%`;
+  }
+  if (note) label += ` · ${note}`;
+
+  const ts = new Date().toISOString();
+  mdkpSel.forEach(id => {
+    const m = members.find(x => x.id === id); if (!m) return;
+    const delta = mdkpCalcDelta(m.dkp);
+    const before = m.dkp;
+    m.dkp += delta;
+    if (m.db_id) db.updateMemberDkp(m.db_id, m.dkp);
+    const entry = {
+      member_id: m.db_id || null, member_name: m.char || m.wx,
+      change_type: '手动调整', amount: delta,
+      dkp_before: before, dkp_after: m.dkp,
+      note: label, event_name: mdkpEvtId ? (events.find(x=>x.id===mdkpEvtId)?.name||'') : '',
+      ts,
+    };
+    dkpChangeLog.unshift(entry);
+    if (dkpChangeLog.length > 500) dkpChangeLog.pop();
+    db.insertDkpChange(entry);
+  });
+
+  renderDkpChangeLog();
+  renderDkp();
+  if (mdkpEvtId) renderED(mdkpEvtId);
+  closeMo('mo-modify-dkp');
+  toast(`已修改 ${mdkpSel.length} 人的DKP ✓`, 'ok');
 }
 // ══ EDIT DKP LOG ══
 let edlEvtId = null;     // event local id
