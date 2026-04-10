@@ -443,6 +443,113 @@ body.light-mode .sp-rn{background:rgba(100,72,22,.05)!important}
   .ed-stats{grid-template-columns:1fr 1fr 1fr}
 }
 
+/* ══ MOBILE HAMBURGER NAV ══ */
+.mob-menu-btn{
+  display:none;background:none;border:1px solid var(--border);
+  color:var(--muted);width:34px;height:34px;border-radius:7px;
+  cursor:pointer;font-size:18px;align-items:center;justify-content:center;
+  margin-left:auto;transition:.18s;flex-shrink:0;
+}
+.mob-menu-btn:hover{color:var(--gold);border-color:var(--gold)}
+
+/* ══ MOBILE RESPONSIVE ══ */
+@media(max-width:768px){
+  /* Header */
+  .hdr{padding:0 14px}
+  .hdr-in{height:52px;gap:10px}
+  .logo .en{font-size:12px;letter-spacing:2px}
+  .logo .cn{display:none}
+  .mob-menu-btn{display:flex}
+  #theme-btn{margin-left:0}
+
+  /* Nav: hidden by default, dropdown when .mob-open */
+  .nav{
+    display:none;position:fixed;top:52px;left:0;right:0;
+    flex-direction:column;gap:0;margin-left:0;
+    background:rgba(10,12,16,.97);border-bottom:1px solid var(--border);
+    backdrop-filter:blur(16px);z-index:199;padding:8px;
+  }
+  .nav.mob-open{display:flex}
+  .nb{justify-content:flex-start;padding:12px 16px;border-radius:8px;font-size:14px}
+  .nb.on{background:rgba(201,168,76,.08)}
+
+  /* App padding */
+  .app{padding:14px 12px}
+
+  /* Calendar */
+  .cal-page{min-height:420px}
+  .cal-top{padding:10px 12px}
+  .cal-period{font-size:13px}
+  .mg-cell{min-height:64px;padding:3px 4px}
+  .epill{font-size:10px;padding:2px 5px}
+
+  /* Week view */
+  .week-grid{grid-template-columns:36px repeat(7,1fr)}
+  .wg-dh .wd{font-size:8px}
+  .wg-dh .wdn{font-size:13px;width:26px;height:26px}
+
+  /* Member table */
+  .sp-wrap{max-height:calc(100vh - 240px)}
+  .sp-toolbar{gap:5px;padding:6px 8px}
+  .sp-toolbar .admin-only{display:none!important}
+
+  /* DKP page */
+  .stats-row{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .sc{padding:12px}
+  .sc-v{font-size:20px}
+  #pg-dkp > div:last-child{display:flex;flex-direction:column;gap:14px}
+
+  /* Event detail */
+  .ed-hero{padding:16px}
+  .ed-title{font-size:17px}
+  .ed-stats{grid-template-columns:1fr 1fr 1fr;gap:6px}
+  .eds-v{font-size:16px}
+  .ed-acts{flex-wrap:wrap;gap:6px}
+  .ed-acts .btn{font-size:12px;padding:6px 12px}
+
+  /* Gear */
+  .gear-layout{grid-template-columns:1fr}
+  #gear-type-cards{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+
+  /* Modals */
+  .md{padding:18px 16px;width:calc(100vw - 24px)!important;max-width:calc(100vw - 24px)!important}
+  .mg2{grid-template-columns:1fr}
+  .md-footer{gap:8px}
+
+  /* Buttons */
+  .btn{font-size:12px;padding:7px 14px}
+  .btn-sm{font-size:11px;padding:4px 10px}
+
+  /* Quick links grid */
+  #pg-links > div{grid-template-columns:1fr!important}
+
+  /* Toast */
+  .tw{bottom:14px;right:10px;left:10px}
+  .toast{font-size:12px;padding:9px 13px}
+
+  /* Hide keyboard hints on mobile */
+  #pg-members > div:last-child{display:none}
+}
+
+@media(max-width:480px){
+  .hdr-in{gap:6px}
+  .app{padding:10px 8px}
+  .cal-period{font-size:12px}
+  .mg-cell{min-height:52px}
+  .epill{font-size:9px;padding:1px 4px}
+  .sc-v{font-size:18px}
+  .vbtns{display:none}
+  .ed-stats{grid-template-columns:1fr 1fr}
+}
+
+/* Light mode mobile nav */
+body.light-mode .nav{
+  background:rgba(240,228,200,.97);
+  border-bottom-color:rgba(100,72,22,.2);
+}
+body.light-mode .mob-menu-btn{border-color:rgba(100,72,22,.3);color:var(--lmuted)}
+body.light-mode .mob-menu-btn:hover{color:var(--lgold);border-color:var(--lgold)}
+
 /* ── LOGIN OVERLAY ── */
 .login-overlay{position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .login-overlay::before{content:'';position:absolute;inset:0;background:rgba(4,6,12,.82);z-index:1;backdrop-filter:blur(2px)}
@@ -480,6 +587,7 @@ body.viewer-mode .admin-only{display:none!important}
     <button class="nb" onclick="showPg('links')" id="nav-links">🔗 快速链接</button>
   </nav>
   <button id="theme-btn" onclick="toggleTheme()" title="切换黑白模式" style="background:none;border:1px solid var(--border);color:var(--muted);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:.18s;margin-left:8px;flex-shrink:0">🌙</button>
+  <button class="mob-menu-btn" id="mob-menu-btn" onclick="toggleMobNav()" title="菜单">☰</button>
   <div id="user-badge-wrap" style="margin-left:10px"></div>
 </div></div>
 
@@ -540,6 +648,7 @@ body.viewer-mode .admin-only{display:none!important}
     <button class="btn btn-outline btn-sm admin-only" onclick="spFillDown()" title="将选中列的第一个值填充到所选行" style="height:28px;padding:0 10px">⬇ 向下填充</button>
     <button class="btn btn-outline btn-sm admin-only" onclick="spDeleteRows()" title="删除选中行" style="height:28px;padding:0 10px;color:var(--red)">🗑 删除选中</button>
     <button class="btn btn-gold btn-sm admin-only" onclick="spAddRow()" style="height:28px;padding:0 12px">＋ 添加团员</button>
+    <button class="btn btn-outline btn-sm" onclick="exportCSV('members')" title="导出团员列表为CSV" style="height:28px;padding:0 10px;color:var(--blue);border-color:rgba(74,159,224,.4)">⬇ 导出CSV</button>
     <div class="sp-info" id="sp-sel-info">共 <b id="sp-total">0</b> 人</div>
   </div>
   <div class="sp-wrap">
@@ -577,6 +686,7 @@ body.viewer-mode .admin-only{display:none!important}
     <div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
         <div class="stitle" style="font-size:10px;margin:0;flex:1">DKP 排行榜</div>
+        <button class="btn btn-outline btn-sm" onclick="exportCSV('dkp')" title="导出DKP排行为CSV" style="border-color:rgba(74,159,224,.4);color:var(--blue)">⬇ 导出CSV</button>
         <button class="btn btn-outline btn-sm admin-only" onclick="openModifyDkpMo(null)" style="border-color:rgba(160,110,224,.5);color:var(--purple)">✏️ 一键修改DKP</button>
       </div>
       <div class="tb-wrap"><table>
@@ -598,6 +708,7 @@ body.viewer-mode .admin-only{display:none!important}
             <option value="分配装备">分配装备</option>
             <option value="手动调整">手动调整</option>
           </select>
+          <button class="btn btn-outline btn-sm" onclick="exportCSV('dkplog')" title="导出变动记录为CSV" style="height:26px;padding:0 8px;font-size:11px;color:var(--blue);border-color:rgba(74,159,224,.4)">⬇ CSV</button>
         </div>
       </div>
       <div id="dkp-change-log" style="max-height:calc(100vh - 280px);overflow-y:auto;display:flex;flex-direction:column;gap:5px">
@@ -1204,14 +1315,14 @@ function renderWeek(){
     days.forEach(d=>{
       const ds=ds_(d.getFullYear(),d.getMonth()+1,d.getDate());
       const evHr=events.filter(e=>e.date===ds&&parseInt(e.time)===hr%24);
-      h+=`<div class="wg-cell">${evHr.map(e=>`<div class="epill ep-${e.status}" style="position:absolute;inset:2px;font-size:11px" onclick="openEvtDetail(${e.id})">${e.name}</div>`).join('')}</div>`;
+      h+=`<div class="wg-cell">${evHr.map(e=>`<div class="epill ep-${e.status}" style="position:absolute;inset:2px;font-size:11px" onclick="openEvtDetail(${e.id})" title="${e.name}${e.note?' · '+e.note:''}">${e.name}</div>`).join('')}</div>`;
     });
   }
   h+=`</div>`;
   document.getElementById('main-body').innerHTML=h;
 }
 
-function pills(ds){return events.filter(e=>e.date===ds).map(e=>`<div class="epill ep-${e.status}" onclick="openEvtDetail(${e.id})">${e.time} ${e.name}</div>`).join('');}
+function pills(ds){return events.filter(e=>e.date===ds).map(e=>`<div class="epill ep-${e.status}" onclick="openEvtDetail(${e.id})" title="${e.name}${e.note?' · '+e.note:''}">${e.time} ${e.name}</div>`).join('');}
 function ds_(y,m,d){return`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;}
 
 // ══ EVENT DETAIL ══
@@ -3988,6 +4099,64 @@ function updateClsColor(sel) {
 // Don't auto-load — wait for user to log in or enter viewer
 // loadAllFromDB() is called inside doLogin() and enterViewer()
 console.log('AT Guild DKP ready. Waiting for login...');
+
+// ══ MOBILE NAV TOGGLE ══
+function toggleMobNav() {
+  const nav = document.querySelector('.nav');
+  const btn = document.getElementById('mob-menu-btn');
+  const open = nav.classList.toggle('mob-open');
+  btn.textContent = open ? '✕' : '☰';
+}
+// Close mobile nav when a page is selected
+const _origShowPg = typeof showPg === 'function' ? showPg : null;
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.nav .nb').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const nav = document.querySelector('.nav');
+      const menuBtn = document.getElementById('mob-menu-btn');
+      nav.classList.remove('mob-open');
+      if (menuBtn) menuBtn.textContent = '☰';
+    });
+  });
+});
+
+// ══ CSV EXPORT ══
+function exportCSV(type) {
+  let rows = [], filename = '';
+  if (type === 'members') {
+    filename = '团员列表.csv';
+    rows.push(['微信名','战网ID','角色名','职业','职责','状态','DKP','备注']);
+    members.forEach(m => rows.push([m.wx,m.bn,m.char,m.cls,m.role,m.st,m.dkp,m.note||'']));
+  } else if (type === 'dkp') {
+    filename = 'DKP排行.csv';
+    rows.push(['排名','角色名','职业','职责','当前DKP','状态']);
+    [...members].sort((a,b)=>b.dkp-a.dkp).forEach((m,i) =>
+      rows.push([i+1, m.char||m.wx, m.cls, m.role, m.dkp, m.st])
+    );
+  } else if (type === 'dkplog') {
+    filename = 'DKP变动记录.csv';
+    const filterMem = document.getElementById('dcl-member')?.value || '';
+    const filterType = document.getElementById('dcl-type')?.value || '';
+    let list = dkpChangeLog;
+    if (filterMem) list = list.filter(e => e.member_name === filterMem);
+    if (filterType) list = list.filter(e => e.change_type === filterType);
+    rows.push(['时间','角色名','变动类型','变动值','变动前','变动后','活动','备注']);
+    list.forEach(e => {
+      let ts = '';
+      try { const d=new Date(e.ts); ts=d.toLocaleString('zh-CN'); } catch(err){}
+      rows.push([ts, e.member_name, e.change_type, e.amount, e.dkp_before, e.dkp_after, e.event_name||'', e.note||'']);
+    });
+  }
+  const bom = '\uFEFF'; // UTF-8 BOM for Excel
+  const csv = bom + rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast(`已导出 ${filename}`, 'ok');
+}
 </script>
 
 <!-- LOGIN OVERLAY -->
