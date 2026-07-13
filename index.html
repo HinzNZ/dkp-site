@@ -864,7 +864,8 @@ body.viewer-mode .admin-only{display:none!important}
   <div class="tpanel on" id="intent-panel-1">
     <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap">
       <input class="fi" id="intent-search" oninput="renderIntentTab()" placeholder="搜索战网ID..." style="max-width:280px">
-      <button class="btn btn-outline btn-sm" id="sort-pref-btn" onclick="toggleIntentSort()" style="margin-left:auto">⬆ 已登记优先</button>
+      <button class="btn btn-outline btn-sm" id="intent-refresh-btn" onclick="refreshIntentTable()" style="margin-left:auto" title="重新拉取最新的报名意向数据（多人同时编辑时使用）">🔄 刷新</button>
+      <button class="btn btn-outline btn-sm" id="sort-pref-btn" onclick="toggleIntentSort()">⬆ 已登记优先</button>
     </div>
     <div class="tb-wrap">
       <table>
@@ -1220,10 +1221,7 @@ body.viewer-mode .admin-only{display:none!important}
     <div class="md-title">✏️ 编辑报名意向 — <span id="intent-edit-name"></span></div>
     <div class="stitle">已登记倾向</div>
     <div id="intent-current-prefs" style="min-height:44px;display:flex;flex-wrap:wrap;gap:7px;padding:10px;background:var(--bg-card2);border:1px solid var(--border);border-radius:8px;margin-bottom:18px"></div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-      <div class="stitle" style="margin:0;flex:1">添加倾向</div>
-      <button class="btn btn-outline btn-sm" onclick="location.reload()" title="刷新页面">🔄 刷新页面</button>
-    </div>
+    <div class="stitle">添加倾向</div>
     <div class="mg2" style="margin-bottom:10px">
       <div class="fg">
         <label class="fl">职业</label>
@@ -4328,6 +4326,27 @@ function switchIntentTab(n) {
   if(n===2) { renderLineupTab(); renderAvailPlayers(); }
 }
 
+// Re-fetch signup intents (and members, in case someone else added one) from
+// Supabase and re-render the table — for when multiple people edit intents at once.
+async function refreshIntentTable() {
+  const btn = document.getElementById('intent-refresh-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 刷新中...'; }
+  try {
+    const mRows = await db.getMembers();
+    if (mRows.length) members = mRows.map(rowToMember);
+    const intentRows = await sbFetch('signup_intents?select=*') || [];
+    signupIntents = intentRows.map(r => ({ db_id: r.id, memberId: r.member_id, prefs: r.prefs||[] }));
+    try { localStorage.setItem('at-signup-intents', JSON.stringify(signupIntents)); } catch(e) {}
+    renderIntentTab();
+    toast('已刷新最新报名意向 ✓', 'ok');
+  } catch(e) {
+    console.error('refreshIntentTable error:', e);
+    toast('刷新失败，请检查网络', 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 刷新'; }
+  }
+}
+
 // ── Tab 1: Intent List ──
 function renderIntentTab() {
   const q = (document.getElementById('intent-search')?.value||'').toLowerCase();
@@ -4495,9 +4514,11 @@ function lineupCardHtml(l) {
       <div style="font-size:11px;color:var(--muted);padding:5px 8px;border:1px dashed rgba(201,168,76,.2);border-radius:5px;text-align:center;margin-top:4px">拖入成员</div>
     </div>`;
   };
+  const total = (l.tanks||[]).length + (l.meleeDps||[]).length + (l.rangedDps||[]).length + (l.healers||[]).length;
   return `<div class="lineup-card">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
       <span style="font-family:'Cinzel',serif;font-size:15px;color:var(--gold);font-weight:700">${l.name}</span>
+      <span style="font-size:11px;color:var(--muted)">共 ${total} 人</span>
       <button class="btn btn-outline btn-sm" onclick="renameLineup(${l.id})">重命名</button>
       <button class="btn btn-red btn-sm" style="margin-left:auto" onclick="deleteLineup(${l.id})">删除</button>
     </div>
