@@ -1220,7 +1220,10 @@ body.viewer-mode .admin-only{display:none!important}
     <div class="md-title">✏️ 编辑报名意向 — <span id="intent-edit-name"></span></div>
     <div class="stitle">已登记倾向</div>
     <div id="intent-current-prefs" style="min-height:44px;display:flex;flex-wrap:wrap;gap:7px;padding:10px;background:var(--bg-card2);border:1px solid var(--border);border-radius:8px;margin-bottom:18px"></div>
-    <div class="stitle">添加倾向</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <div class="stitle" style="margin:0;flex:1">添加倾向</div>
+      <button class="btn btn-outline btn-sm" onclick="location.reload()" title="刷新页面">🔄 刷新页面</button>
+    </div>
     <div class="mg2" style="margin-bottom:10px">
       <div class="fg">
         <label class="fl">职业</label>
@@ -3703,6 +3706,10 @@ function switchLoginTab(tab) {
   document.getElementById('login-err').textContent = '';
 }
 
+function persistSession(role) {
+  try { sessionStorage.setItem('at-session', role); } catch(e) {}
+}
+
 function doLogin() {
   const u = document.getElementById('login-user').value.trim();
   const p = document.getElementById('login-pass').value;
@@ -3713,6 +3720,7 @@ function doLogin() {
     document.getElementById('user-badge-wrap').innerHTML =
       `<span class="admin-badge" onclick="openMo('mo-chpw')" title="点击修改账号密码">🔐 管理员</span>`;
     toast('管理员登录成功 🎉', 'ok');
+    persistSession('admin');
     if (!dbLoaded) { dbLoaded = true; loadAllFromDB(); }
   } else {
     document.getElementById('login-err').textContent = '用户名或密码错误';
@@ -3725,15 +3733,38 @@ function enterViewer() {
   document.getElementById('login-overlay').style.display = 'none';
   document.getElementById('user-badge-wrap').innerHTML =
     `<span class="viewer-badge" onclick="showLogoutMenu()" title="切换账号">👁 只读模式</span>`;
+  persistSession('viewer');
   if (!dbLoaded) { dbLoaded = true; loadAllFromDB(); }
 }
 
 function showLogoutMenu() {
   if (confirm('切换到管理员登录？')) {
+    try { sessionStorage.removeItem('at-session'); } catch(e) {}
     document.getElementById('login-overlay').style.display = 'flex';
     document.getElementById('login-user').value = '';
     document.getElementById('login-pass').value = '';
     switchLoginTab('admin');
+  }
+}
+
+// Restore login state after a page refresh so the overlay isn't shown again
+function restoreSession() {
+  let role;
+  try { role = sessionStorage.getItem('at-session'); } catch(e) { role = null; }
+  if (role === 'admin') {
+    isAdmin = true;
+    document.body.classList.remove('viewer-mode');
+    document.getElementById('login-overlay').style.display = 'none';
+    document.getElementById('user-badge-wrap').innerHTML =
+      `<span class="admin-badge" onclick="openMo('mo-chpw')" title="点击修改账号密码">🔐 管理员</span>`;
+    if (!dbLoaded) { dbLoaded = true; loadAllFromDB(); }
+  } else if (role === 'viewer') {
+    isAdmin = false;
+    document.body.classList.add('viewer-mode');
+    document.getElementById('login-overlay').style.display = 'none';
+    document.getElementById('user-badge-wrap').innerHTML =
+      `<span class="viewer-badge" onclick="showLogoutMenu()" title="切换账号">👁 只读模式</span>`;
+    if (!dbLoaded) { dbLoaded = true; loadAllFromDB(); }
   }
 }
 
@@ -3742,6 +3773,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('user-badge-wrap').addEventListener('click', e => {
     if (!isAdmin) return;
   });
+  restoreSession();
 });
 
 function confirmChPw() {
