@@ -3539,8 +3539,20 @@ function renderGloot(){
     </table></div>`;
 }
 
-// ══ NAV ══
+// ══ NAV / URL ROUTING ══
+const PAGE_SLUGS = { cal:'raid', members:'members', dkp:'dkp', gear:'gear', links:'links', intent:'intents' };
+const SLUG_PAGES = Object.fromEntries(Object.entries(PAGE_SLUGS).map(([k,v]) => [v,k]));
+
+// Switches the visible page and syncs the URL hash. Call this from onclick handlers.
 function showPg(p){
+  applyPage(p);
+  const slug = PAGE_SLUGS[p] || p;
+  if (location.hash !== '#/'+slug) location.hash = '#/'+slug;
+}
+
+// Actually swaps DOM state for page p, without touching the URL (used by the router itself).
+function applyPage(p){
+  if (p === 'intent' && !(typeof isAdmin !== 'undefined' && isAdmin)) p = 'cal';
   document.querySelectorAll('.pg').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(x=>x.classList.remove('on'));
   document.getElementById('pg-'+p)?.classList.add('on');
@@ -3550,6 +3562,14 @@ function showPg(p){
   if(p==='gear'){renderGear();renderGloot();renderGearItems();}
   if(p==='intent'){loadIntentData();renderIntentTab();}
 }
+
+// Reads the current #/slug and shows the matching page (used on load + back/forward nav).
+function routeFromHash(){
+  const slug = location.hash.replace(/^#\/?/, '');
+  const p = SLUG_PAGES[slug];
+  applyPage(p && document.getElementById('pg-'+p) ? p : 'cal');
+}
+window.addEventListener('hashchange', routeFromHash);
 function toggleTheme(){
   document.body.classList.toggle('light-mode');
   const btn=document.getElementById('theme-btn');
@@ -4094,6 +4114,7 @@ async function loadAllFromDB() {
       showDBError();
       initCal(); renderMembers(); renderDkp();
       if(typeof renderGear==='function') renderGear();
+      routeFromHash();
       return;
     }
     // Load members
@@ -4182,6 +4203,7 @@ async function loadAllFromDB() {
     renderMembers();
     renderDkp();
     if (typeof renderGear === 'function') renderGear();
+    routeFromHash();
 
   } catch(e) {
     console.error('DB load error:', e);
@@ -4190,6 +4212,7 @@ async function loadAllFromDB() {
     initCal();
     renderMembers(); renderDkp();
     if(typeof renderGear==='function') renderGear();
+    routeFromHash();
   }
 }
 
